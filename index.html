@@ -94,7 +94,7 @@
     <h2>1 · Sezione e periodo</h2>
     <div class="sezioni">
       <label class="sezione"><input type="radio" name="sezione" value="depositi" checked> Depositi</label>
-      <label class="sezione off" title="In preparazione"><input type="radio" name="sezione" value="impieghi" disabled> Impieghi <span class="badge">in preparazione</span></label>
+      <label class="sezione"><input type="radio" name="sezione" value="impieghi"> Impieghi</label>
       <label class="sezione off" title="In preparazione"><input type="radio" name="sezione" value="sofferenze" disabled> Sofferenze <span class="badge">in preparazione</span></label>
       <label class="sezione off" title="In preparazione"><input type="radio" name="sezione" value="sportelli" disabled> Sportelli <span class="badge">in preparazione</span></label>
     </div>
@@ -150,7 +150,7 @@
 
   <section class="card">
     <h2>Come funziona</h2>
-    <details open>
+    <details open data-sezione="depositi">
       <summary>Depositi: tabelle prodotte, dati usati e regole</summary>
       <ul>
         <li><b>Credito_Depositi_Sintesi</b>: depositi di Varese, Lombardia e Italia a fine trimestre, confrontati con lo stesso mese dell'anno prima (colonne intestate con il trimestre, es. «I trim 2026» e «I trim 2025»).</li>
@@ -166,9 +166,26 @@
       <p class="nota">La Banca d'Italia pubblica le tavole mensili tra il 27 e il 31 di ogni mese, con circa due mesi di ritardo (es. i dati di marzo a fine maggio).
         I dati automatici vengono scaricati il giorno 2 di ogni mese. I file che carichi restano sul tuo computer.</p>
     </details>
+    <details open data-sezione="impieghi" hidden>
+      <summary>Impieghi: tabelle prodotte, dati usati e regole</summary>
+      <ul>
+        <li><b>Credito_Impieghi_Sintesi</b>: impieghi (prestiti) di Varese, Lombardia e Italia a fine trimestre, confrontati con lo stesso mese dell'anno prima (colonne intestate con il trimestre, es. «I trim 2026» e «I trim 2025»).</li>
+        <li><b>Credito_Impieghi_Tempo-trimestrale</b>: impieghi di Varese a fine trimestre dal I trim di 5 anni prima, con la variazione tendenziale.</li>
+        <li><b>Credito_Impieghi_Tempo-annuale</b>: solo con il IV trimestre, impieghi di Varese a dicembre di ogni anno dal 2011.</li>
+        <li><b>Credito_Impieghi_tipoclientela</b>: Varese a fine trimestre, dal I trim di 5 anni prima (periodi scritti come «I trim '26»): famiglie consumatrici, imprese private (al netto delle captive), altro = totale − famiglie − imprese, totale.</li>
+      </ul>
+      <p class="nota">Fonte: tavola <b>TDB10295</b> «Prestiti (esclusi PCT) – per provincia, settore e sottosettore della clientela», ente segnalante
+        «Banche e Cassa depositi e prestiti». Totale = «Clientela residente e non residente al netto delle Istituzioni finanziarie monetarie».
+        Gli impieghi sono consistenze a <b>fine mese</b>: il trimestre è il mese di fine trimestre (marzo, giugno, settembre, dicembre), nessuna somma.
+        Valori in <b>milioni di euro</b> arrotondati all'unità (la Banca d'Italia li dà in migliaia); variazioni calcolate sui valori non arrotondati e arrotondate a 2 decimali come ARROTONDA di Excel.
+        Nomi dei file, intestazioni ed etichette sono quelli delle tabelle di Osserva degli impieghi.
+        Le tabelle vengono ricalcolate ogni volta sui dati più recenti: la Banca d'Italia rivede i dati dell'anno precedente, quindi anche i trimestri passati possono cambiare leggermente.</p>
+      <p class="nota">La Banca d'Italia pubblica le tavole mensili tra il 27 e il 31 di ogni mese, con circa due mesi di ritardo (es. i dati di marzo a fine maggio).
+        I dati automatici vengono scaricati il giorno 2 di ogni mese. I file che carichi restano sul tuo computer.</p>
+    </details>
   </section>
 </main>
-<footer>Fonte: Banca d'Italia – Base Dati Statistica · elaborazione Camera di Commercio di Varese · versione 1.0</footer>
+<footer>Fonte: Banca d'Italia – Base Dati Statistica · elaborazione Camera di Commercio di Varese · versione 1.1</footer>
 
 <script id="motore">
 "use strict";
@@ -186,19 +203,37 @@ const ROMANI = ["I", "II", "III", "IV"];
 const MESI_IT = ["gennaio", "febbraio", "marzo", "aprile", "maggio", "giugno", "luglio", "agosto", "settembre", "ottobre", "novembre", "dicembre"];
 
 // Una voce per sezione. Le sezioni senza «pronta» compaiono nella pagina ma non si possono ancora usare.
+// «forma» = nomi dei file, intestazioni ed etichette come le tabelle di Osserva di quella sezione
+// (i modelli dei depositi e degli impieghi differiscono in qualche dettaglio: scelta dell'utente 29/09/2026, copiarli com'erano).
 const SEZIONI = {
   depositi: {
-    nome: "Depositi", pronta: true, tavola: "TDB10290", fenec: "1041810", ente: "1070001",
+    nome: "Depositi", deiNome: "dei depositi", pronta: true, tavola: "TDB10290", fenec: "1041810", ente: "1070001",
     titolo: "Depositi (esclusi PCT) - per provincia, settore e sottosettore della clientela",
     settori: { totale: "SBI59", famiglie: "600", imprese: "S11BI32" },
     annoIniziale: 2011, cartella: "Report_credito_depositi",
+    forma: {
+      file: { sintesi: "Credito_Depositi_Sintesi", trimestrale: "Credito_Depositi_Tempo-trimestrale", annuale: "Credito_Depositi_Tempo-annuale", tipo: "Credito_Depositi_Tipo-clientela" },
+      voce: "Depositi", varTrimestrale: "T var% tend", varAnnuale: "T var% tend", primaAnnuale: "_",
+      periodoTipo: (a, t) => nomeTrim(a, t),
+    },
+  },
+  impieghi: {
+    nome: "Impieghi", deiNome: "degli impieghi", pronta: true, tavola: "TDB10295", fenec: "1077778", ente: "1070001",
+    titolo: "Prestiti (esclusi PCT) - per provincia, settore e sottosettore della clientela",
+    settori: { totale: "SBI59", famiglie: "600", imprese: "S11BI32" },
+    annoIniziale: 2011, cartella: "Report_credito_impieghi",
+    forma: {
+      file: { sintesi: "Credito_Impieghi_Sintesi", trimestrale: "Credito_Impieghi_Tempo-trimestrale", annuale: "Credito_Impieghi_Tempo-annuale", tipo: "Credito_Impieghi_tipoclientela" },
+      voce: "Impieghi", varTrimestrale: "T.var% tend", varAnnuale: "T var% tend", primaAnnuale: null,
+      periodoTipo: (a, t) => `${ROMANI[t - 1]} trim '${String(a).slice(2)}`,   // «I trim '26» come il modello
+    },
   },
 };
 
 // Etichette dei prospetti scaricati a mano dal portale (per leggere i REPORT_….xlsx)
 const ETICHETTE = {
   ENTE_SEGN: { "banche e cassa depositi e prestiti": "1070001", "banche": "1100010" },
-  FENEC: { "depositi (esclusi pct)": "1041810" },
+  FENEC: { "depositi (esclusi pct)": "1041810", "prestiti (esclusi pct)": "1077778" },
   LOC_CTP: { "italia": "IT", "lombardia": "ITC4", "varese": "ITC41" },
   SET_CTP: {
     "clientela residente e non residente al netto delle istituzioni finanziarie monetarie": "SBI59",
@@ -211,6 +246,9 @@ const ETICHETTE = {
     "amministrazioni pubbliche": "S13",
   },
 };
+// sezione a cui servono i dati di un fenomeno (es. "1077778" -> "impieghi")
+const sezioneDiFenec = f => Object.keys(SEZIONI).find(k => SEZIONI[k].fenec === f) || null;
+
 const NOMI_DIMENSIONI = {
   "ente segnalante": "ENTE_SEGN", "fenomeno economico": "FENEC",
   "localizzazione della controparte": "LOC_CTP", "settore istituzionale della controparte": "SET_CTP",
@@ -586,16 +624,22 @@ function controllaPeriodo(dati, sez, anno, trim) {
   return { ok: manca.length === 0, manca, avvisi, ultimo };
 }
 
-/* ------------------------------------------------------------------ tabelle dei depositi */
-function tabelleDepositi(dati, anno, trim) {
-  const S = SEZIONI.depositi;
+/* ------------------------------------------------------------------ tabelle (depositi, impieghi) */
+// nomi dei file .xlsx della sezione (senza estensione); Tempo-annuale solo con il IV trimestre
+function tabelleAttese(sez, trim) {
+  const f = SEZIONI[sez].forma.file;
+  return trim === 4 ? [f.sintesi, f.trimestrale, f.annuale, f.tipo] : [f.sintesi, f.trimestrale, f.tipo];
+}
+
+function tabelleSezione(dati, sez, anno, trim) {
+  const S = SEZIONI[sez], F = S.forma;
   const g = (loc, set, data) => dati.get(S.ente, S.fenec, loc, set, data);
   const tot = (loc, a, t) => g(loc, S.settori.totale, fineTrim(a, t));
   const tabelle = [];
 
   // Sintesi: fine trimestre dell'anno e dello stesso mese dell'anno prima
   tabelle.push({
-    nome: "Credito_Depositi_Sintesi.xlsx",
+    nome: `${F.file.sintesi}.xlsx`,
     tab: {
       foglio: "Foglio1", colValori: [3, 4], colPct: [5],
       // intestazioni con il trimestre (richiesta dell'utente 29/09/2026), es. «I trim 2026 (milioni di euro)» | «I trim 2025 (milioni di euro)»
@@ -612,10 +656,10 @@ function tabelleDepositi(dati, anno, trim) {
   for (let a = anno - 5; a <= anno; a++) for (let t = 1; t <= 4; t++) if (a < anno || t <= trim) trimestri.push([a, t]);
 
   tabelle.push({
-    nome: "Credito_Depositi_Tempo-trimestrale.xlsx",
+    nome: `${F.file.trimestrale}.xlsx`,
     tab: {
       foglio: "Foglio1", colValori: [3], colPct: [4],
-      intest: ["Anno", "Trimestre", "Depositi", "T var% tend"],
+      intest: ["Anno", "Trimestre", F.voce, F.varTrimestrale],
       righe: trimestri.map(([a, t]) => [a, nomeTrim(a, t), milioni(tot("ITC41", a, t)), variaz(tot("ITC41", a, t), tot("ITC41", a - 1, t))]),
     },
   });
@@ -625,29 +669,30 @@ function tabelleDepositi(dati, anno, trim) {
     const righe = [];
     for (let a = S.annoIniziale; a <= anno; a++) {
       const n = tot("ITC41", a, 4), o = tot("ITC41", a - 1, 4);
-      righe.push([a, milioni(n), o == null && a === S.annoIniziale ? "_" : variaz(n, o)]);
+      righe.push([a, milioni(n), o == null && a === S.annoIniziale ? F.primaAnnuale : variaz(n, o)]);
     }
     tabelle.push({
-      nome: "Credito_Depositi_Tempo-annuale.xlsx",
-      tab: { foglio: "Foglio1", colValori: [2], colPct: [3], intest: ["Anno", "Depositi", "T var% tend"], righe },
+      nome: `${F.file.annuale}.xlsx`,
+      tab: { foglio: "Foglio1", colValori: [2], colPct: [3], intest: ["Anno", F.voce, F.varAnnuale], righe },
     });
   }
 
   // Tipo clientela: Altro = Totale - Famiglie - Imprese, sui valori già arrotondati (come il file di lavoro)
   tabelle.push({
-    nome: "Credito_Depositi_Tipo-clientela.xlsx",
+    nome: `${F.file.tipo}.xlsx`,
     tab: {
       foglio: "Foglio1", colValori: [3, 4, 5, 6], colPct: [],
       intest: ["Anno", "Periodo", "Famiglie", "Imprese private", "Altro", "Totale"],
       righe: trimestri.map(([a, t]) => {
         const d = fineTrim(a, t);
         const fam = milioni(g("ITC41", S.settori.famiglie, d)), imp = milioni(g("ITC41", S.settori.imprese, d)), to = milioni(g("ITC41", S.settori.totale, d));
-        return [a, nomeTrim(a, t), fam, imp, (fam == null || imp == null || to == null) ? null : to - fam - imp, to];
+        return [a, F.periodoTipo(a, t), fam, imp, (fam == null || imp == null || to == null) ? null : to - fam - imp, to];
       }),
     },
   });
   return tabelle;
 }
+const tabelleDepositi = (dati, anno, trim) => tabelleSezione(dati, "depositi", anno, trim);
 
 /* ------------------------------------------------------------------ generazione completa */
 function generaReport(dati, sez, anno, trim, ctx = {}) {
@@ -662,8 +707,8 @@ function generaReport(dati, sez, anno, trim, ctx = {}) {
     throw new ErroreDati(`Mancano i dati di: ${c.manca.join(", ")}.${u}`);
   }
   for (const a of c.avvisi) log(`Manca il dato di ${a}: la cella resta vuota.`, "warn");
-  const tabelle = tabelleDepositi(dati, anno, trim);
-  if (trim !== 4) log("Credito_Depositi_Tempo-annuale non creato: si fa solo con il IV trimestre.", "muted");
+  const tabelle = tabelleSezione(dati, sez, anno, trim);
+  if (trim !== 4) log(`${S.forma.file.annuale} non creato: si fa solo con il IV trimestre.`, "muted");
   const file = tabelle.map(t => ({ nome: t.nome, dati: creaXlsx([t.tab]), tab: t.tab }));
   return { cartella: `${S.cartella}_${anno}_T${trim}`, file, avvisi: c.avvisi };
 }
@@ -775,8 +820,8 @@ function creaZip(voci, data = new Date()) {
 }
 
 if (typeof module !== "undefined" && module.exports) {
-  module.exports = { SEZIONI, TERRITORI, ETICHETTE, DatiCredito, leggiCsvBdi, leggiProspetto, leggiFileCredito, apriXlsx,
-                     ultimoTrimestre, controllaPeriodo, tabelleDepositi, generaReport, creaXlsx, creaZip, round2, round0,
+  module.exports = { SEZIONI, sezioneDiFenec, TERRITORI, ETICHETTE, DatiCredito, leggiCsvBdi, leggiProspetto, leggiFileCredito, apriXlsx,
+                     ultimoTrimestre, controllaPeriodo, tabelleAttese, tabelleSezione, tabelleDepositi, generaReport, creaXlsx, creaZip, round2, round0,
                      fineTrim, trimDaData, ErroreDati, URL_A2A, URL_DATI_ONLINE };
 }
 </script>
@@ -789,7 +834,7 @@ if (typeof module !== "undefined" && module.exports) {
 (function () {
   const $ = id => document.getElementById(id);
   const XLSX = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
-  const stato = { auto: null, autoInfo: null, autoErr: null, file: [], dati: new DatiCredito(), sceltaUtente: false, url: [] };
+  const stato = { auto: new Map(), autoInfo: null, cerco: true, file: [], dati: new DatiCredito(), sceltaUtente: false, url: [] };
   const sezione = () => document.querySelector("input[name=sezione]:checked").value;
 
   function log(msg, tag) {
@@ -823,34 +868,35 @@ if (typeof module !== "undefined" && module.exports) {
   /* ---------- dati */
   function ricostruisci() {
     const d = new DatiCredito();
-    if (stato.auto) d.aggiungi(stato.auto.valori);
+    for (const a of stato.auto.values()) d.aggiungi(a.valori);
     for (const f of stato.file) if (f.valori) d.aggiungi(f.valori);
     stato.dati = d;
     periodoPredefinito();
     aggiorna();
   }
 
+  // all'apertura carica le tavole di tutte le sezioni pronte (una per sezione: dati/<TAVOLA>.csv)
   async function caricaAutomatici() {
-    const S = SEZIONI[sezione()];
+    const tavole = [...new Set(Object.values(SEZIONI).filter(S => S.pronta).map(S => S.tavola))];
     const basi = location.protocol === "file:" ? [URL_DATI_ONLINE] : ["dati/", URL_DATI_ONLINE];
-    let ultimoErr = null;
-    for (const base of basi) {
-      try {
-        const r = await fetch(`${base}${S.tavola}.csv`, { cache: "no-store" });
-        if (!r.ok) throw new Error(`HTTP ${r.status}`);
-        const letto = leggiCsvBdi(await r.text());
-        let info = null;
-        try { const ri = await fetch(`${base}aggiornamento.json`, { cache: "no-store" }); if (ri.ok) info = await ri.json(); } catch (e) { /* facoltativo */ }
-        stato.auto = letto; stato.autoInfo = info; stato.autoErr = null;
-        stato.autoBase = base;
-        ricostruisci();
-        log(`Dati automatici caricati: ${S.tavola}, fino a ${meseIt(letto.ultima)}.`, "ok");
-        return;
-      } catch (e) { ultimoErr = e; }
+    for (const tavola of tavole) {
+      for (const base of basi) {
+        try {
+          const r = await fetch(`${base}${tavola}.csv`, { cache: "no-store" });
+          if (!r.ok) throw new Error(`HTTP ${r.status}`);
+          const letto = leggiCsvBdi(await r.text());
+          if (!stato.autoInfo) {
+            try { const ri = await fetch(`${base}aggiornamento.json`, { cache: "no-store" }); if (ri.ok) stato.autoInfo = await ri.json(); } catch (e) { /* facoltativo */ }
+          }
+          stato.auto.set(tavola, letto);
+          log(`Dati automatici caricati: ${tavola}, fino a ${meseIt(letto.ultima)}.`, "ok");
+          break;
+        } catch (e) { /* si prova l'indirizzo successivo */ }
+      }
+      if (!stato.auto.has(tavola)) log(`Dati automatici di ${tavola} non raggiungibili: scarica lo ZIP dalla Banca d'Italia e trascinalo nella pagina (punto 2).`, "warn");
     }
-    stato.auto = null; stato.autoErr = ultimoErr;
+    stato.cerco = false;
     ricostruisci();
-    log("Dati automatici non raggiungibili: scarica lo ZIP dalla Banca d'Italia e trascinalo nella pagina (punto 2).", "warn");
   }
 
   function mostraFonte() {
@@ -859,29 +905,34 @@ if (typeof module !== "undefined" && module.exports) {
     $("linkA2A").href = URL_A2A + S.tavola;
     $("nomeTavola").textContent = S.tavola;
     $("nomeZip").textContent = `BANKITALIA_DIFF_${S.tavola}.zip`;
-    if (stato.auto) {
+    const auto = stato.auto.get(S.tavola);
+    if (auto) {
       const info = stato.autoInfo && stato.autoInfo[S.tavola];
       const quando = info && info.scaricato ? new Date(info.scaricato) : null;
       const contr = stato.autoInfo && stato.autoInfo.controllato ? new Date(stato.autoInfo.controllato) : null;
       const fmt = d => d.toLocaleDateString("it-IT") + " alle " + d.toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" });
       el.className = "fonte ok";
-      el.innerHTML = `<span class="icona">✅</span><div><b>Dati automatici: ${esc(S.tavola)} fino a ${esc(meseIt(stato.auto.ultima))}</b>
+      el.innerHTML = `<span class="icona">✅</span><div><b>Dati automatici: ${esc(S.tavola)} fino a ${esc(meseIt(auto.ultima))}</b>
         <span class="dett">${quando ? `Scaricati dalla Banca d'Italia il ${esc(fmt(quando))}` : "Scaricati dalla Banca d'Italia"}${contr && (!quando || contr - quando > 60000) ? ` · ultimo controllo il ${esc(fmt(contr))}` : ""}.
         Si aggiornano da soli il giorno 2 di ogni mese.</span></div>`;
+    } else if (stato.cerco) {
+      el.className = "fonte";
+      el.innerHTML = `<span class="icona">⏳</span><div><b>Cerco i dati aggiornati automaticamente…</b></div>`;
     } else {
       el.className = "fonte warn";
-      el.innerHTML = `<span class="icona">⚠️</span><div><b>Dati automatici non disponibili</b>
+      el.innerHTML = `<span class="icona">⚠️</span><div><b>Dati automatici di ${esc(S.tavola)} non disponibili</b>
         <span class="dett">${location.protocol === "file:" ? "La pagina è aperta dal computer e il sito con i dati automatici non risponde. " : ""}Scarica lo ZIP e trascinalo qui sotto (passi 1 e 2).</span></div>`;
     }
   }
 
+  const perSezione = f => { const n = (f.fenec || []).map(sezioneDiFenec).filter(Boolean).map(k => SEZIONI[k].nome.toLowerCase()); return n.length ? ` (${esc(n.join(", "))})` : ""; };
   function mostraFile() {
     const ul = $("listaFile");
     ul.innerHTML = "";
     stato.file.forEach((f, i) => {
       const li = document.createElement("li");
       if (f.errore) li.className = "errore";
-      li.innerHTML = `<span>${f.errore ? "✗" : "✓"} <b>${esc(f.nome)}</b> — ${f.errore ? esc(f.errore) : `${esc(f.descr)}, dati fino a ${esc(meseIt(f.ultima))}`}</span>`;
+      li.innerHTML = `<span>${f.errore ? "✗" : "✓"} <b>${esc(f.nome)}</b> — ${f.errore ? esc(f.errore) : `${esc(f.descr)}${perSezione(f)}, dati fino a ${esc(meseIt(f.ultima))}`}</span>`;
       const b = document.createElement("button");
       b.className = "togli"; b.title = "Togli"; b.textContent = "✕";
       b.onclick = () => { stato.file.splice(i, 1); mostraFile(); ricostruisci(); };
@@ -912,6 +963,7 @@ if (typeof module !== "undefined" && module.exports) {
   /* ---------- controllo */
   function aggiorna() {
     mostraFonte();
+    document.querySelectorAll("details[data-sezione]").forEach(d => { d.hidden = d.dataset.sezione !== sezione(); });
     const sez = sezione(), anno = Number($("anno").value), trim = Number($("trim").value);
     $("notaPeriodo").textContent = trim === 4
       ? "Con il IV trimestre si crea anche la tabella Tempo-annuale (dicembre di ogni anno)."
@@ -927,10 +979,11 @@ if (typeof module !== "undefined" && module.exports) {
     const riga = (nome, ok, dett) => `<tr><td>${esc(nome)}</td><td><span class="badge ${ok === true ? "ok" : ok === "warn" ? "warn" : "err"}">${ok === true ? "pronta" : ok === "warn" ? "con celle vuote" : "non si può fare"}</span></td><td class="dett">${esc(dett)}</td></tr>`;
     let html = `<table class="controllo">`;
     const warn = c.avvisi.length ? "warn" : true;
-    html += riga("Credito_Depositi_Sintesi", c.ok, `${meseIt(fineTrim(anno, trim))} e ${meseIt(fineTrim(anno - 1, trim))}: Varese, Lombardia, Italia`);
-    html += riga("Credito_Depositi_Tempo-trimestrale", c.ok ? warn : false, `Varese dal ${nomeTrim(anno - 5, 1)} al ${nomeTrim(anno, trim)}`);
-    if (trim === 4) html += riga("Credito_Depositi_Tempo-annuale", c.ok ? warn : false, `Varese, dicembre ${S.annoIniziale}–${anno}`);
-    html += riga("Credito_Depositi_Tipo-clientela", c.ok ? warn : false, "famiglie consumatrici, imprese private, altro, totale");
+    const f = S.forma.file;
+    html += riga(f.sintesi, c.ok, `${meseIt(fineTrim(anno, trim))} e ${meseIt(fineTrim(anno - 1, trim))}: Varese, Lombardia, Italia`);
+    html += riga(f.trimestrale, c.ok ? warn : false, `Varese dal ${nomeTrim(anno - 5, 1)} al ${nomeTrim(anno, trim)}`);
+    if (trim === 4) html += riga(f.annuale, c.ok ? warn : false, `Varese, dicembre ${S.annoIniziale}–${anno}`);
+    html += riga(f.tipo, c.ok ? warn : false, "famiglie consumatrici, imprese private, altro, totale");
     html += `</table>`;
     if (!c.ok) {
       const u = c.ultimo ? `L'ultimo trimestre disponibile è il <b>${esc(nomeTrim(c.ultimo.anno, c.ultimo.trim))}</b>.` : "";
@@ -938,7 +991,7 @@ if (typeof module !== "undefined" && module.exports) {
         I dati di fine trimestre escono circa due mesi dopo (es. marzo a fine maggio).</div>`;
     } else {
       if (c.avvisi.length) html += `<div class="servono">Mancano alcuni dati (celle vuote): ${esc(c.avvisi.join(", "))}.</div>`;
-      html += `<div class="pronto">Tutto pronto per il ${esc(nomeTrim(anno, trim))}: ${trim === 4 ? 4 : 3} tabelle.</div>`;
+      html += `<div class="pronto">Tutto pronto per il ${esc(nomeTrim(anno, trim))}: ${tabelleAttese(sez, trim).length} tabelle ${esc(S.deiNome)}.</div>`;
     }
     el.innerHTML = html;
     $("genera").disabled = !c.ok;
@@ -950,7 +1003,7 @@ if (typeof module !== "undefined" && module.exports) {
     stato.url.forEach(u => URL.revokeObjectURL(u)); stato.url = [];
     $("risultati").hidden = true;
     try {
-      log(`Genero le tabelle dei ${SEZIONI[sez].nome.toLowerCase()} del ${nomeTrim(anno, trim)}…`);
+      log(`Genero le tabelle ${SEZIONI[sez].deiNome} del ${nomeTrim(anno, trim)}…`);
       const esito = generaReport(stato.dati, sez, anno, trim, { log });
       const elenco = $("elenco");
       elenco.innerHTML = "";
@@ -980,7 +1033,7 @@ if (typeof module !== "undefined" && module.exports) {
 
   /* ---------- eventi */
   $("anno").onchange = $("trim").onchange = () => { stato.sceltaUtente = true; $("risultati").hidden = true; aggiorna(); };
-  document.querySelectorAll("input[name=sezione]").forEach(r => r.onchange = () => { $("risultati").hidden = true; aggiorna(); });
+  document.querySelectorAll("input[name=sezione]").forEach(r => r.onchange = () => { $("risultati").hidden = true; periodoPredefinito(); aggiorna(); });
   $("genera").onclick = genera;
   $("scegli").onchange = e => { caricaFile([...e.target.files]); e.target.value = ""; };
   const drop = $("drop");

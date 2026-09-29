@@ -1,19 +1,20 @@
 REPORT CREDITO – BANCA D'ITALIA (Varese · Lombardia · Italia)
 ==============================================================
-Versione 1.0 – 29/09/2026. Sezione pronta: DEPOSITI. In preparazione: impieghi, sofferenze, sportelli.
+Versione 1.1 – 29/09/2026. Sezioni pronte: DEPOSITI e IMPIEGHI. In preparazione: sofferenze, sportelli.
 
 A COSA SERVE
-Crea le tabelle Excel per Osserva sui depositi bancari, con i dati della Banca d'Italia
-(tavola TDB10290 «Depositi (esclusi PCT) – per provincia, settore e sottosettore della clientela»).
+Crea le tabelle Excel per Osserva sui depositi e sugli impieghi (prestiti) bancari, con i dati della Banca d'Italia:
+- depositi: tavola TDB10290 «Depositi (esclusi PCT) – per provincia, settore e sottosettore della clientela»;
+- impieghi: tavola TDB10295 «Prestiti (esclusi PCT) – per provincia, settore e sottosettore della clientela».
 Non serve installare niente: è una pagina web che funziona nel browser (Chrome, Edge, Firefox, Safari).
 
 COME SI USA (ogni trimestre)
-1. Apri la pagina (sito pubblicato oppure doppio clic su index.html).
-2. Guarda il riquadro «2 · Dati della Banca d'Italia»:
-   - se è VERDE («Dati automatici: TDB10290 fino a …») i dati sono già caricati, non devi fare niente;
+1. Apri la pagina (sito pubblicato oppure doppio clic su index.html) e scegli la sezione (Depositi o Impieghi).
+2. Guarda il riquadro «2 · Dati della Banca d'Italia» (si riferisce alla sezione scelta):
+   - se è VERDE («Dati automatici: TDB10290 fino a …», per gli impieghi TDB10295) i dati sono già caricati, non devi fare niente;
    - se è ARANCIONE, oppure il mese indicato è vecchio:
-       a) clicca «Scarica TDB10290 dalla Banca d'Italia»: il browser scarica il file
-          BANKITALIA_DIFF_TDB10290.zip (circa 5 MB) nella cartella Download;
+       a) clicca «Scarica TDB10290 dalla Banca d'Italia» (impieghi: «Scarica TDB10295…»): il browser scarica il file
+          BANKITALIA_DIFF_TDB10290.zip (impieghi: BANKITALIA_DIFF_TDB10295.zip, circa 5 MB) nella cartella Download;
        b) trascina quel file ZIP nel riquadro tratteggiato (o clicca il riquadro e sceglilo).
           Non serve aprirlo o scompattarlo.
 3. Scegli anno e trimestre (la pagina propone da sola l'ultimo trimestre disponibile).
@@ -21,11 +22,17 @@ COME SI USA (ogni trimestre)
 5. Scarica i file uno per uno oppure tutti insieme con «Scarica tutto (ZIP)».
 
 TABELLE PRODOTTE (nomi come le tabelle di Osserva, in formato .xlsx, foglio «Foglio1»)
+DEPOSITI:
 - Credito_Depositi_Sintesi.xlsx            Varese, Lombardia, Italia: fine trimestre, stesso mese dell'anno prima, variazione %
                                            (colonne intestate con il trimestre, es. «I trim 2026 (milioni di euro)» e «I trim 2025 (milioni di euro)»)
 - Credito_Depositi_Tempo-trimestrale.xlsx  Varese a fine trimestre dal I trim di 5 anni prima, variazione tendenziale
 - Credito_Depositi_Tempo-annuale.xlsx      SOLO con il IV trimestre: Varese a dicembre di ogni anno dal 2011
 - Credito_Depositi_Tipo-clientela.xlsx     Varese: famiglie consumatrici, imprese private, altro, totale
+IMPIEGHI (stesse tabelle, con i nomi, le intestazioni e le etichette delle tabelle di Osserva degli impieghi):
+- Credito_Impieghi_Sintesi.xlsx            come la Sintesi dei depositi (colonne intestate con il trimestre, in milioni di euro)
+- Credito_Impieghi_Tempo-trimestrale.xlsx  Varese a fine trimestre dal I trim di 5 anni prima, variazione tendenziale
+- Credito_Impieghi_Tempo-annuale.xlsx      SOLO con il IV trimestre: Varese a dicembre di ogni anno dal 2011 (prima variazione vuota)
+- Credito_Impieghi_tipoclientela.xlsx      Varese: famiglie consumatrici, imprese private, altro, totale (periodi scritti «I trim '26»)
 Valori in MILIONI di euro arrotondati (la Banca d'Italia li dà in migliaia); variazioni con 2 decimali (come ARROTONDA di Excel).
 I numeri sono salvati come numeri veri (non testo).
 
@@ -45,7 +52,7 @@ DA SAPERE
 CONTENUTO DELLA CARTELLA
 - index.html                             la pagina
 - LEGGIMI.txt                            queste istruzioni
-- dati/TDB10290.csv                      dati automatici (solo Varese, Lombardia, Italia), aggiornati dal computer di GitHub
+- dati/TDB10290.csv, dati/TDB10295.csv   dati automatici di depositi e impieghi (solo Varese, Lombardia, Italia), aggiornati dal computer di GitHub
 - dati/aggiornamento.json                data dell'ultimo scaricamento
 - aggiorna_dati.py                       programma che scarica e filtra i dati (lo usa GitHub; a mano: python3 aggiorna_dati.py)
 - .github/workflows/aggiorna-dati.yml    istruzioni per GitHub: quando lanciare aggiorna_dati.py (il 2 di ogni mese)

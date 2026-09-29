@@ -30,6 +30,8 @@ TERRITORI = ["ITC41", "ITC4", "IT"]
 TAVOLE = [
     {"codice": "TDB10290", "nome": "Depositi (esclusi PCT) - per provincia, settore e sottosettore della clientela",
      "filtri": {"LOC_CTP": TERRITORI, "ENTE_SEGN": ["1070001"]}},
+    {"codice": "TDB10295", "nome": "Prestiti (esclusi PCT) - per provincia, settore e sottosettore della clientela",
+     "filtri": {"LOC_CTP": TERRITORI, "ENTE_SEGN": ["1070001"]}},
 ]
 COLONNE = ["DATA_OSS", "ENTE_SEGN", "FENEC", "LOC_CTP", "SET_CTP", "VALORE", "STATUS"]
 
