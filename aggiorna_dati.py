@@ -7,8 +7,9 @@ Solo libreria standard di Python (niente da installare).
 
 Per ogni tavola di TAVOLE:
   1. scarica lo ZIP dal servizio A2A della Base Dati Statistica (tutta la tavola, ~5 MB);
-  2. tiene le righe dei territori e degli enti indicati;
-  3. scrive dati/<CODICE>.csv (stesso formato del CSV della Banca d'Italia) e aggiorna dati/aggiornamento.json.
+  2. tiene le righe dei territori e degli enti indicati (le colonne dipendono dalla tavola: il territorio è LOC_CTP
+     per depositi e impieghi, SEDELEG_SOGG per le sofferenze);
+  3. scrive dati/<CODICE>.csv (stesse colonne del CSV della Banca d'Italia) e aggiorna dati/aggiornamento.json.
 Se il download non riesce o i dati sembrano sbagliati (vuoti, più vecchi di quelli già salvati)
 i file esistenti NON vengono toccati e lo script termina con errore (GitHub manda un'e-mail).
 """
@@ -32,8 +33,12 @@ TAVOLE = [
      "filtri": {"LOC_CTP": TERRITORI, "ENTE_SEGN": ["1070001"]}},
     {"codice": "TDB10295", "nome": "Prestiti (esclusi PCT) - per provincia, settore e sottosettore della clientela",
      "filtri": {"LOC_CTP": TERRITORI, "ENTE_SEGN": ["1070001"]}},
+    {"codice": "TRI30401", "nome": "Quota delle sofferenze (al lordo delle svalutazioni e al netto dei passaggi a perdita) "
+                                   "di pertinenza dei maggiori affidati - per provincia della clientela",
+     "filtri": {"SEDELEG_SOGG": TERRITORI}},
 ]
-COLONNE = ["DATA_OSS", "ENTE_SEGN", "FENEC", "LOC_CTP", "SET_CTP", "VALORE", "STATUS"]
+# colonne che devono esserci in ogni tavola (oltre a quelle dei filtri)
+OBBLIGATORIE = ["DATA_OSS", "ENTE_SEGN", "FENEC", "SET_CTP", "VALORE"]
 
 
 def scarica(url, tentativi=4):
@@ -55,31 +60,32 @@ def leggi_csv_zip(dati):
     for nome in z.namelist():
         if nome.lower().endswith(".csv"):
             testo = z.read(nome).decode("utf-8-sig")
-            if testo.lstrip().startswith('"DATA_OSS"') or testo.lstrip().startswith("DATA_OSS"):
+            if "DATA_OSS" in testo.split("\n", 1)[0]:
                 return nome, testo
     raise RuntimeError("nello ZIP non c'è il CSV dei dati (colonna DATA_OSS)")
 
 
 def filtra(testo, filtri):
+    """Restituisce (intestazione, righe tenute): tutte le colonne della tavola, nell'ordine del CSV originale."""
     righe = csv.reader(io.StringIO(testo), delimiter=";")
     testa = next(righe)
-    mancanti = [c for c in COLONNE if c not in testa]
+    mancanti = [c for c in OBBLIGATORIE + list(filtri) if c not in testa]
     if mancanti:
         raise RuntimeError(f"colonne mancanti nel CSV: {mancanti}")
-    pos = {c: testa.index(c) for c in COLONNE}
+    pos = {c: testa.index(c) for c in filtri}
     tenute = []
     for r in righe:
         if len(r) < len(testa):
             continue
         if all(r[pos[c]] in valori for c, valori in filtri.items()):
-            tenute.append([r[pos[c]] for c in COLONNE])
-    return tenute
+            tenute.append(r[:len(testa)])
+    return testa, tenute
 
 
-def scrivi_csv(percorso, righe):
+def scrivi_csv(percorso, testa, righe):
     buf = io.StringIO()
     w = csv.writer(buf, delimiter=";", quoting=csv.QUOTE_ALL, lineterminator="\n")
-    w.writerow(COLONNE)
+    w.writerow(testa)
     w.writerows(righe)
     tmp = percorso + ".tmp"
     with open(tmp, "w", encoding="utf-8", newline="") as f:
@@ -101,14 +107,15 @@ def main():
         print(f"{cod}: scarico…", flush=True)
         try:
             nome, testo = leggi_csv_zip(scarica(URL.format(codice=cod)))
-            righe = filtra(testo, t["filtri"])
+            testa, righe = filtra(testo, t["filtri"])
             if not righe:
                 raise RuntimeError("nessuna riga per i territori richiesti")
-            ultimo = max(r[0] for r in righe)
+            i_data = testa.index("DATA_OSS")
+            ultimo = max(r[i_data] for r in righe)
             prima = info.get(cod, {}).get("ultimo_dato")
             if prima and ultimo < prima:
                 raise RuntimeError(f"i dati scaricati arrivano al {ultimo}, quelli salvati al {prima}: tengo i vecchi")
-            scrivi_csv(os.path.join(CARTELLA, f"{cod}.csv"), righe)
+            scrivi_csv(os.path.join(CARTELLA, f"{cod}.csv"), testa, righe)
             info[cod] = {"nome": t["nome"], "file_banca_italia": nome, "scaricato": adesso,
                          "ultimo_dato": ultimo, "righe": len(righe), "filtri": t["filtri"]}
             print(f"{cod}: {len(righe)} righe, ultimo dato {ultimo}", flush=True)
