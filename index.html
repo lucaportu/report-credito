@@ -65,6 +65,13 @@
   table.controllo td:first-child { white-space: nowrap; font-weight: 600; }
   table.controllo td:nth-child(2) { white-space: nowrap; }
   table.controllo .dett { color: var(--muted); font-size: .82rem; width: 100%; }
+  /* telefono: nome del file, stato e dettaglio uno sotto l'altro (i nomi lunghi non fanno scorrere la pagina di lato) */
+  @media (max-width: 600px) {
+    table.controllo, table.controllo tbody, table.controllo tr, table.controllo td { display: block; width: auto; }
+    table.controllo tr { border-top: 1px solid var(--line); padding: 6px 0; }
+    table.controllo td { border-top: 0; padding: 2px 4px; }
+    table.controllo td:first-child { white-space: normal; overflow-wrap: anywhere; }
+  }
   .badge { display: inline-block; font-size: .74rem; border-radius: 999px; padding: 1px 9px; background: var(--line); color: var(--muted); white-space: nowrap; font-weight: 600; }
   .badge.ok { background: var(--ok-soft); color: var(--ok); }
   .badge.warn { background: var(--warn-soft); color: var(--warn); }
@@ -96,11 +103,11 @@
       <label class="sezione"><input type="radio" name="sezione" value="depositi" checked> Depositi</label>
       <label class="sezione"><input type="radio" name="sezione" value="impieghi"> Impieghi</label>
       <label class="sezione"><input type="radio" name="sezione" value="sofferenze"> Sofferenze</label>
-      <label class="sezione off" title="In preparazione"><input type="radio" name="sezione" value="sportelli" disabled> Sportelli <span class="badge">in preparazione</span></label>
+      <label class="sezione"><input type="radio" name="sezione" value="sportelli"> Sportelli</label>
     </div>
     <div class="riga" style="margin-top:16px">
       <label class="campo">Anno <select id="anno"></select></label>
-      <label class="campo">Trimestre
+      <label class="campo" id="campoTrim">Trimestre
         <select id="trim">
           <option value="1">I trimestre</option><option value="2">II trimestre</option>
           <option value="3">III trimestre</option><option value="4">IV trimestre</option>
@@ -144,6 +151,7 @@
 
   <section class="card" id="risultati" hidden>
     <h2 id="titoloRisultati">File pronti</h2>
+    <div id="avvisoRisultati" class="servono" hidden style="margin:0 0 12px"></div>
     <a id="zip" class="zip" href="#">⬇ Scarica tutto (ZIP)</a>
     <div id="elenco"></div>
   </section>
@@ -200,9 +208,24 @@
       <p class="nota">La tavola delle sofferenze è trimestrale: esce circa tre mesi dopo la fine del trimestre (es. i dati di marzo a fine giugno). Servono anche gli impieghi dello stesso trimestre.
         I dati automatici vengono controllati i giorni 28, 29, 30 e 31 di ogni mese e il 2 del mese dopo. I file che carichi restano sul tuo computer.</p>
     </details>
+    <details open data-sezione="sportelli" hidden>
+      <summary>Sportelli: tabelle prodotte, dati usati e regole</summary>
+      <ul>
+        <li><b>Sportelli_sintesi</b>: Varese, i 7 anni fino a quello scelto (colonne intestate con gli anni): comuni serviti da banche, sportelli, sportelli ogni 100mila abitanti, dipendenti delle banche, numero di ATM.</li>
+        <li><b>Sportelli_tempo</b>: numero di sportelli di Varese al 31 dicembre di ogni anno dal 2001.</li>
+      </ul>
+      <p class="nota">Fonte: tavole della Banca d'Italia, ente segnalante «Banche», territorio = localizzazione dello sportello:
+        <b>TDB20207</b> «Banche e sportelli – per provincia» (numero degli sportelli, numero di comuni serviti da banche),
+        <b>TDB20220</b> (numero sportelli per 100.000 abitanti), <b>TDB10227</b> «Dipendenti – per provincia» (numero dipendenti),
+        <b>TSPAG110</b> «ATM e POS – per provincia di sportello» (numero di ATM). Gli sportelli 2001–2014 vengono dalla vecchia tavola TDB10207
+        (ferma al 2016, valori fissi nella pagina, uguali a quelli di Osserva). Valori usati così come li dà la Banca d'Italia.</p>
+      <p class="nota">Dati annuali al 31 dicembre: sportelli, comuni e dipendenti escono a fine marzo dell'anno dopo (tavole «articolazione territoriale»);
+        il numero di ATM esce con le statistiche sui pagamenti a fine ottobre dell'anno dopo (es. il 2024 il 22/10/2025): finché manca, la cella dell'ATM resta vuota e la pagina lo segnala.
+        I dati automatici vengono controllati i giorni 28, 29, 30 e 31 di ogni mese e il 2 del mese dopo. I file che carichi restano sul tuo computer.</p>
+    </details>
   </section>
 </main>
-<footer>Fonte: Banca d'Italia – Base Dati Statistica · elaborazione Camera di Commercio di Varese · versione 1.3</footer>
+<footer>Fonte: Banca d'Italia – Base Dati Statistica · elaborazione Camera di Commercio di Varese · versione 1.4</footer>
 
 <script id="motore">
 "use strict";
@@ -261,14 +284,37 @@ const SEZIONI = {
       periodo: (a, t) => `${ROMANI[t - 1]} trim '${String(a).slice(2)}`,   // «I trim '26» come il modello
     },
   },
+  // Sportelli (file di lavoro Sportelli_anno_2024.xls): dati ANNUALI al 31 dicembre, si sceglie solo l'anno.
+  // Tavole «articolazione territoriale» TDB20207 (sportelli, comuni serviti), TDB20220 (sportelli ogni 100.000 abitanti),
+  // TDB10227 (dipendenti), più TSPAG110 (numero di ATM, statistiche sui pagamenti: formato a serie storiche, esce dopo gli altri).
+  // Territorio = LOC_SPORT «Localizzazione dello sportello»; nessun settore (nella chiave il settore è vuoto).
+  sportelli: {
+    nome: "Sportelli", deiNome: "degli sportelli", pronta: true, schema: "sportelli", annuale: true,
+    tavole: ["TDB20207", "TDB20220", "TDB10227", "TSPAG110"], ente: "1100010", fenec: "30990009", fenecAtm: "1700802",
+    altriFenec: ["30990005", "30990011", "1001503", "1700802", "1700808"],
+    // righe della Sintesi: [etichetta del modello, fenomeno, indispensabile, nome nei messaggi]; l'ATM se manca lascia la cella vuota (scelta dell'utente)
+    indicatori: [["Comuni serviti da banche", "30990005", true, "comuni serviti"], ["Sportelli", "30990009", true, "sportelli"],
+                 ["Sportelli ogni 100mila abitanti", "30990011", true, "sportelli ogni 100mila abitanti"],
+                 ["Dipendenti banche a Varese", "1001503", true, "dipendenti"], ["N° ATM (*)", "1700802", false, "ATM"]],
+    anniSintesi: 7, annoInizioTempo: 2001, cartella: "Report_credito_sportelli",
+    uscita: "una volta l'anno: sportelli, comuni e dipendenti a fine marzo dell'anno dopo; il numero di ATM a fine ottobre dell'anno dopo (statistiche sui pagamenti)",
+    forma: { file: { sintesi: "Sportelli_sintesi", tempo: "Sportelli_tempo" } },
+  },
 };
+// Sportelli di Varese al 31 dicembre 2001-2014 dalla vecchia tavola TDB10207 «Banche e sportelli - per provincia e gruppi
+// istituzionali di banche» (Bollettino statistico, ferma al 2016; ente 1100010, fenomeno 30990009): la nuova TDB20207 parte
+// dal 2015 (nel 2015 le due tavole coincidono: 425). Valori uguali alla tabella di Osserva; controllati da test_sportelli.js.
+const STORICO_SPORTELLI = { 2001: 417, 2002: 421, 2003: 430, 2004: 442, 2005: 453, 2006: 460, 2007: 474, 2008: 494,
+                            2009: 491, 2010: 469, 2011: 465, 2012: 452, 2013: 444, 2014: 420 };
 const tavolePronte = () => [...new Set(Object.values(SEZIONI).filter(S => S.pronta).flatMap(S => S.tavole))];
 
 // Etichette dei prospetti scaricati a mano dal portale (per leggere i REPORT_….xlsx)
 const ETICHETTE = {
   ENTE_SEGN: { "banche e cassa depositi e prestiti": "1070001", "banche": "1100010" },
   FENEC: { "depositi (esclusi pct)": "1041810", "prestiti (esclusi pct)": "1077778",
-           "sofferenze nette: utilizzato": "55100033", "sofferenze: numero di affidati": "55100041" },
+           "sofferenze nette: utilizzato": "55100033", "sofferenze: numero di affidati": "55100041",
+           "numero degli sportelli": "30990009", "numero di comuni serviti da banche": "30990005",
+           "numero sportelli per 100.000 abitanti": "30990011", "numero dipendenti": "1001503", "numero di atm": "1700802" },
   CLASSE: { "totale >=250": "1101", "primo 0,5 % degli affidati": "301", "primo 1 % degli affidati": "302",
             "primo 5 % degli affidati": "310", "primo 10 % degli affidati": "320" },
   LOC_CTP: { "italia": "IT", "lombardia": "ITC4", "varese": "ITC41" },
@@ -290,7 +336,7 @@ const sezioneDiFenec = f => Object.keys(SEZIONI).find(k => SEZIONI[k].fenec === 
 // «sede legale del censito» (TRI30401) occupa lo stesso posto di «localizzazione della controparte» nella chiave dei dati
 const NOMI_DIMENSIONI = {
   "ente segnalante": "ENTE_SEGN", "fenomeno economico": "FENEC",
-  "localizzazione della controparte": "LOC_CTP", "sede legale del censito": "LOC_CTP",
+  "localizzazione della controparte": "LOC_CTP", "sede legale del censito": "LOC_CTP", "localizzazione dello sportello": "LOC_CTP",
   "settore istituzionale della controparte": "SET_CTP", "classe di grandezza del numero degli affidati": "CLASSE",
 };
 
@@ -489,10 +535,12 @@ const territoriUsati = new Set(TERRITORI.map(t => t[0]));
 function leggiCsvBdi(testo) {
   const nl = testo.indexOf("\n");
   const testa = (nl < 0 ? testo : testo.slice(0, nl)).replace(/\r$/, "").split(";").map(s => s.replace(/^"|"$/g, "").trim());
-  const iLoc = testa.includes("LOC_CTP") ? testa.indexOf("LOC_CTP") : testa.indexOf("SEDELEG_SOGG");
-  const col = ["DATA_OSS", "ENTE_SEGN", "FENEC", "SET_CTP", "VALORE"].map(c => testa.indexOf(c));
+  // tavole a serie storiche (es. TSPAG110): una colonna per serie «SDP_LOCATM.A.<ente>.<fenomeno>.<territorio>»
+  if (!testa.includes("FENEC") && testa.some(c => RE_SERIE.test(c))) return leggiCsvSerie(testo, testa);
+  const iLoc = ["LOC_CTP", "SEDELEG_SOGG", "LOC_SPORT"].map(c => testa.indexOf(c)).find(i => i >= 0) ?? -1;
+  const col = ["DATA_OSS", "ENTE_SEGN", "FENEC", "VALORE"].map(c => testa.indexOf(c));
   if (col.some(i => i < 0) || iLoc < 0) throw new ErroreDati("Il file CSV non è una tavola della Banca d'Italia (mancano le colonne DATA_OSS, LOC_CTP, VALORE…).");
-  const [iD, iE, iF, iS, iV] = col, iC = testa.indexOf("CLASSE_NUMAFF");
+  const [iD, iE, iF, iV] = col, iS = testa.indexOf("SET_CTP"), iC = testa.indexOf("CLASSE_NUMAFF");
   const valori = new Map(), fenec = new Set();
   let righe = 0, ultima = "";
   let p = nl + 1;
@@ -511,7 +559,7 @@ function leggiCsvBdi(testo) {
     const v = Number(vs.replace(",", "."));
     if (!Number.isFinite(v)) continue;
     const d = c[iD].replace(/"/g, ""), f = c[iF].replace(/"/g, "");
-    const set = c[iS].replace(/"/g, "") + (iC >= 0 ? ":" + c[iC].replace(/"/g, "") : "");
+    const set = (iS >= 0 ? c[iS].replace(/"/g, "") : "") + (iC >= 0 ? ":" + c[iC].replace(/"/g, "") : "");
     valori.set(chiave(c[iE].replace(/"/g, ""), f, loc, set, d), v);
     fenec.add(f);
     if (d > ultima) ultima = d;
@@ -521,8 +569,37 @@ function leggiCsvBdi(testo) {
   return { valori, fenec: [...fenec], ultima, righe };
 }
 
-// data di un prospetto: "30/06/2026", data Excel (numero) o "2026-06-30"
+// CSV a serie storiche (TSPAG110): "DATA_OSS";"SDP_LOCATM.A.1100010.1700802.IT";… date "2024/12/31"; settore vuoto nella chiave
+const RE_SERIE = /^[A-Z_]+\.[A-Z]\.(\d+)\.(\d+)\.([A-Z0-9]+)$/;
+function leggiCsvSerie(testo, testa) {
+  const iD = testa.indexOf("DATA_OSS"), colonne = [];
+  testa.forEach((c, j) => { const m = RE_SERIE.exec(c); if (m && territoriUsati.has(m[3])) colonne.push([j, m[1], m[2], m[3]]); });
+  const valori = new Map(), fenec = new Set();
+  let righe = 0, ultima = "";
+  for (const linea of testo.split("\n").slice(1)) {
+    if (linea.trim().length < 8) continue;
+    righe += 1;
+    const c = linea.replace(/\r$/, "").split(";");
+    const d = (c[iD] || "").replace(/"/g, "").replace(/\//g, "-");
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(d)) continue;
+    for (const [j, ente, f, loc] of colonne) {
+      const vs = (c[j] || "").replace(/"/g, "").trim();
+      if (vs === "") continue;
+      const v = Number(vs.replace(",", "."));
+      if (!Number.isFinite(v)) continue;
+      valori.set(chiave(ente, f, loc, "", d), v);
+      fenec.add(f);
+      if (d > ultima) ultima = d;
+    }
+  }
+  if (!righe) throw new ErroreDati("Il file CSV della Banca d'Italia è vuoto.");
+  if (!valori.size) throw new ErroreDati("Nel file non ci sono dati di Varese, Lombardia o Italia.");
+  return { valori, fenec: [...fenec], ultima, righe };
+}
+
+// data di un prospetto: "30/06/2026", data Excel (numero), "2026-06-30" o solo l'anno (dati annuali: 31 dicembre)
 function dataProspetto(v) {
+  if ((typeof v === "number" && Number.isInteger(v) && v >= 1900 && v <= 2200) || /^\s*\d{4}\s*$/.test(String(v ?? ""))) return `${String(v).trim()}-12-31`;
   if (typeof v === "number" && v > 20000 && v < 80000) {
     const d = new Date(Date.UTC(1899, 11, 30) + Math.round(v) * 86400000);
     return `${d.getUTCFullYear()}-${pad2(d.getUTCMonth() + 1)}-${pad2(d.getUTCDate())}`;
@@ -543,7 +620,7 @@ function leggiProspetto(righe) {
   const norm = s => String(s ?? "").trim().toLowerCase().replace(/\s+/g, " ");
   const pieno = v => v != null && String(v).trim() !== "";
   const primo = String(righe[0]?.[0] ?? "").trim();
-  const mt = /^([A-Z]{3}\d{5})(?:_(\d+))?$/.exec(primo);
+  const mt = /^([A-Z]{3,5}\d{3,5})(?:_(\d+))?$/.exec(primo);
   if (!mt) throw new ErroreDati("Il file Excel non sembra un prospetto della Banca d'Italia (in A1 manca il codice della tavola, es. TDB10290_1041810).");
   const fissi = {}, perColonna = [];   // perColonna: [dimensione, riga]
   let inizio = -1, colValori = [];
@@ -578,7 +655,9 @@ function leggiProspetto(righe) {
     return [j, k];
   });
   const variabili = new Set(perColonna.map(([d]) => d));
-  for (const d of ["ENTE_SEGN", "FENEC", "LOC_CTP", "SET_CTP"]) if (!variabili.has(d) && !fissi[d]) throw new ErroreDati(`Nel prospetto manca «${Object.keys(NOMI_DIMENSIONI).find(k => NOMI_DIMENSIONI[k] === d)}».`);
+  // le tavole degli sportelli non hanno il settore della clientela
+  const obbligatorie = TAVOLE_SENZA_SETTORE.has(mt[1]) ? ["ENTE_SEGN", "FENEC", "LOC_CTP"] : ["ENTE_SEGN", "FENEC", "LOC_CTP", "SET_CTP"];
+  for (const d of obbligatorie) if (!variabili.has(d) && !fissi[d]) throw new ErroreDati(`Nel prospetto manca «${Object.keys(NOMI_DIMENSIONI).find(k => NOMI_DIMENSIONI[k] === d)}».`);
   const valori = new Map(), fenec = new Set();
   let ultima = "", n = 0;
   for (let r = inizio; r < righe.length; r++) {
@@ -589,7 +668,7 @@ function leggiProspetto(righe) {
       const v = typeof riga[j] === "number" ? riga[j] : numeroIT(riga[j]);
       if (v == null) continue;
       if (!territoriUsati.has(k.LOC_CTP)) continue;
-      valori.set(chiave(k.ENTE_SEGN, k.FENEC, k.LOC_CTP, k.SET_CTP + (k.CLASSE ? ":" + k.CLASSE : ""), d), v);
+      valori.set(chiave(k.ENTE_SEGN, k.FENEC, k.LOC_CTP, (k.SET_CTP || "") + (k.CLASSE ? ":" + k.CLASSE : ""), d), v);
       fenec.add(k.FENEC);
       if (d > ultima) ultima = d;
     }
@@ -609,7 +688,8 @@ function numeroIT(v) {
 }
 
 // codice di una tavola nel nome del file (TDB10290, TRI30401…) e CSV dei dati (prima riga con la colonna DATA_OSS)
-const RE_TAVOLA = /(?:TDB|TRI)\d{5}/;
+const RE_TAVOLA = /(?:TDB|TRI)\d{5}|TSPAG\d{3}/;
+const TAVOLE_SENZA_SETTORE = new Set(["TDB20207", "TDB20220", "TDB10227", "TSPAG110", "TDB10207"]);
 const testaBdi = testo => /^\s*(?:"?[A-Z_]+"?;)*"?DATA_OSS"?;/.test(testo.slice(0, 300));
 
 // qualunque file: ZIP della Banca d'Italia, CSV, prospetto .xlsx
@@ -650,6 +730,7 @@ async function leggiFileCredito(nome, u8) {
 // (la prima è quella principale: da lei si parte a cercare l'ultimo dato)
 function serieSezione(sez) {
   const S = SEZIONI[sez];
+  if (S.schema === "sportelli") return S.indicatori.filter(i => i[2]).map(([, f]) => [S.ente, f, "ITC41", ""]);
   if (S.schema === "sofferenze") {
     const I = S.impieghi;
     return [...TERRITORI.map(([loc]) => [S.ente, S.fenec, loc, S.settore]), ...TERRITORI.map(([loc]) => [S.ente, S.fenecAffidati, loc, S.settore]),
@@ -684,6 +765,18 @@ function controllaPeriodo(dati, sez, anno, trim) {
   const S = SEZIONI[sez];
   const ultimo = ultimoTrimestre(dati, sez);
   const manca = [], avvisi = [];
+  if (S.schema === "sportelli") {
+    // dati annuali: indispensabili gli indicatori di Varese dell'anno scelto; l'ATM può mancare (cella vuota, avviso ben visibile)
+    const g = (f, a) => dati.get(S.ente, f, "ITC41", "", `${a}-12-31`);
+    for (const [, f, indisp, breve] of S.indicatori) if (indisp && g(f, anno) == null) manca.push(`${breve} di Varese ${anno}`);
+    const atmMancante = g(S.fenecAtm, anno) == null;
+    if (atmMancante) avvisi.push(`numero di ATM di Varese ${anno} (non ancora pubblicato dalla Banca d'Italia)`);
+    for (let a = anno - S.anniSintesi + 1; a < anno; a++)
+      for (const [, f, , breve] of S.indicatori) if (g(f, a) == null) avvisi.push(`Varese ${breve} ${a}`);
+    for (let a = S.annoInizioTempo; a < anno; a++)
+      if (g(S.fenec, a) == null && STORICO_SPORTELLI[a] == null) avvisi.push(`Varese sportelli ${a}`);
+    return { ok: manca.length === 0, manca, avvisi, ultimo, atmMancante };
+  }
   if (S.schema === "sofferenze") {
     const I = S.impieghi;
     const serie = [["sofferenze", S.ente, S.fenec, S.settore, [anno, anno - 1]], ["affidati", S.ente, S.fenecAffidati, S.settore, [anno, anno - 1]],
@@ -716,13 +809,16 @@ function controllaPeriodo(dati, sez, anno, trim) {
 /* ------------------------------------------------------------------ tabelle (depositi, impieghi) */
 // nomi dei file .xlsx della sezione (senza estensione); Tempo-annuale solo con il IV trimestre
 function tabelleAttese(sez, trim) {
-  const f = SEZIONI[sez].forma.file, ultima = SEZIONI[sez].schema === "sofferenze" ? f.impieghi : f.tipo;
+  const f = SEZIONI[sez].forma.file;
+  if (SEZIONI[sez].schema === "sportelli") return [f.sintesi, f.tempo];
+  const ultima = SEZIONI[sez].schema === "sofferenze" ? f.impieghi : f.tipo;
   return trim === 4 ? [f.sintesi, f.trimestrale, f.annuale, ultima] : [f.sintesi, f.trimestrale, ultima];
 }
 
 function tabelleSezione(dati, sez, anno, trim) {
   const S = SEZIONI[sez], F = S.forma;
   if (S.schema === "sofferenze") return tabelleSofferenze(dati, anno, trim);
+  if (S.schema === "sportelli") return tabelleSportelli(dati, anno);
   const g = (loc, set, data) => dati.get(S.ente, S.fenec, loc, set, data);
   const tot = (loc, a, t) => g(loc, S.settori.totale, fineTrim(a, t));
   const tabelle = [];
@@ -782,6 +878,28 @@ function tabelleSezione(dati, sez, anno, trim) {
   return tabelle;
 }
 const tabelleDepositi = (dati, anno, trim) => tabelleSezione(dati, "depositi", anno, trim);
+
+/* ------------------------------------------------------------------ tabelle degli sportelli */
+// regole del file di lavoro Sportelli_anno_2024.xls: valori delle tavole così come sono (numeri interi), al 31 dicembre, solo Varese
+function tabelleSportelli(dati, anno) {
+  const S = SEZIONI.sportelli, F = S.forma;
+  const g = (f, a) => dati.get(S.ente, f, "ITC41", "", `${a}-12-31`);
+  const anni = [];
+  for (let a = anno - S.anniSintesi + 1; a <= anno; a++) anni.push(a);
+  const tempo = [];
+  for (let a = S.annoInizioTempo; a <= anno; a++) tempo.push([a - S.annoInizioTempo + 1, a, g(S.fenec, a) ?? STORICO_SPORTELLI[a] ?? null]);
+  return [
+    // Sintesi: 7 anni fino a quello scelto; intestazioni con gli anni veri (scelta dell'utente 29/09/2026) al posto di «Anno 1…Anno 7»;
+    // foglio «Foglio2» come il modello
+    { nome: `${F.file.sintesi}.xlsx`,
+      tab: { foglio: "Foglio2", colValori: anni.map((_, i) => i + 3), colPct: [],
+             intest: ["Ordinamento", "Indicatore", ...anni.map(String)],
+             righe: S.indicatori.map(([nome, f], i) => [i + 1, nome, ...anni.map(a => g(f, a))]) } },
+    // Tempo: sportelli di Varese dal 2001 (2001-2014 dalla vecchia TDB10207, poi TDB20207)
+    { nome: `${F.file.tempo}.xlsx`,
+      tab: { foglio: "Foglio1", colValori: [3], colPct: [], intest: ["Ordine", "Anno", "Numero sportelli"], righe: tempo } },
+  ];
+}
 
 /* ------------------------------------------------------------------ tabelle delle sofferenze */
 // regole del file di lavoro Credito_SOFFERENZE_1trim2026.xlsx: valori della tavola così come sono (sofferenze in milioni,
@@ -851,18 +969,18 @@ function generaReport(dati, sez, anno, trim, ctx = {}) {
   const log = ctx.log || (() => {});
   const S = SEZIONI[sez];
   if (!S || !S.pronta) throw new ErroreDati("Sezione non ancora disponibile.");
-  anno = Number(anno); trim = Number(trim);
+  anno = Number(anno); trim = S.annuale ? 4 : Number(trim);   // sezioni annuali: si usa il 31 dicembre
   if (![1, 2, 3, 4].includes(trim)) throw new ErroreDati("Trimestre non valido.");
   const c = controllaPeriodo(dati, sez, anno, trim);
   if (!c.ok) {
-    const u = c.ultimo ? ` L'ultimo trimestre disponibile è il ${nomeTrim(c.ultimo.anno, c.ultimo.trim)}.` : "";
+    const u = !c.ultimo ? "" : S.annuale ? ` L'ultimo anno disponibile è il ${c.ultimo.anno}.` : ` L'ultimo trimestre disponibile è il ${nomeTrim(c.ultimo.anno, c.ultimo.trim)}.`;
     throw new ErroreDati(`Mancano i dati di: ${c.manca.join(", ")}.${u}`);
   }
   for (const a of c.avvisi) log(`Manca il dato di ${a}: la cella resta vuota.`, "warn");
   const tabelle = tabelleSezione(dati, sez, anno, trim);
   if (trim !== 4) log(`${S.forma.file.annuale} non creato: si fa solo con il IV trimestre.`, "muted");
   const file = tabelle.map(t => ({ nome: t.nome, dati: creaXlsx([t.tab]), tab: t.tab }));
-  return { cartella: `${S.cartella}_${anno}_T${trim}`, file, avvisi: c.avvisi };
+  return { cartella: S.annuale ? `${S.cartella}_${anno}` : `${S.cartella}_${anno}_T${trim}`, file, avvisi: c.avvisi, atmMancante: !!c.atmMancante };
 }
 
 /* ------------------------------------------------------------------ Excel (.xlsx) */
@@ -973,7 +1091,7 @@ function creaZip(voci, data = new Date()) {
 
 if (typeof module !== "undefined" && module.exports) {
   module.exports = { SEZIONI, sezioneDiFenec, TERRITORI, ETICHETTE, DatiCredito, leggiCsvBdi, leggiProspetto, leggiFileCredito, apriXlsx,
-                     ultimoTrimestre, controllaPeriodo, tabelleAttese, tabelleSezione, tabelleDepositi, tabelleSofferenze, trimestriSezione, tavolePronte, generaReport, creaXlsx, creaZip, round2, round0,
+                     ultimoTrimestre, controllaPeriodo, tabelleAttese, tabelleSezione, tabelleDepositi, tabelleSofferenze, tabelleSportelli, STORICO_SPORTELLI, trimestriSezione, tavolePronte, generaReport, creaXlsx, creaZip, round2, round0,
                      fineTrim, trimDaData, ErroreDati, URL_A2A, URL_DATI_ONLINE };
 }
 </script>
@@ -1061,7 +1179,8 @@ if (typeof module !== "undefined" && module.exports) {
     $("linkA2A").innerHTML = S.tavole.map(t => `<a class="bottone" href="${esc(URL_A2A + t)}" rel="noopener">⬇ Scarica ${esc(t)} dalla Banca d'Italia</a>`).join(" ");
     $("testoScarica").textContent = S.tavole.length > 1 ? `Scarica le ${S.tavole.length} tavole` : "Scarica la tavola";
     $("testoZip").textContent = S.tavole.length > 1 ? "i file ZIP scaricati" : "il file ZIP scaricato";
-    $("nomeZip").textContent = S.tavole.map(t => `BANKITALIA_DIFF_${t}.zip`).join(" e ");
+    const zipNomi = S.tavole.map(t => `BANKITALIA_DIFF_${t}.zip`);
+    $("nomeZip").textContent = zipNomi.length > 1 ? `${zipNomi.slice(0, -1).join(", ")} e ${zipNomi[zipNomi.length - 1]}` : zipNomi[0];
     const presenti = S.tavole.filter(t => stato.auto.has(t)), mancanti = S.tavole.filter(t => !stato.auto.has(t));
     const elenco = presenti.map(t => `${t} fino a ${meseIt(stato.auto.get(t).ultima)}`).join(" · ");
     if (!mancanti.length) {
@@ -1117,15 +1236,25 @@ if (typeof module !== "undefined" && module.exports) {
     ricostruisci();
   }
 
+  // avviso ben visibile quando manca il numero di ATM dell'anno (richiesta dell'utente 29/09/2026)
+  const testoAtm = anno => `<b>⚠ Manca il numero di ATM del ${anno}.</b> La Banca d'Italia non l'ha ancora pubblicato
+    (statistiche sui pagamenti, tavola TSPAG110, di solito a fine ottobre dell'anno dopo): le tabelle si possono generare, ma nella Sintesi la cella «N° ATM (*)» del ${anno}
+    resta <b>vuota</b>. Quando il dato esce, rigenera le tabelle.`;
+
   /* ---------- controllo */
   function aggiorna() {
     mostraFonte();
     document.querySelectorAll("details[data-sezione]").forEach(d => { d.hidden = d.dataset.sezione !== sezione(); });
-    const sez = sezione(), anno = Number($("anno").value), trim = Number($("trim").value);
-    const annuale = SEZIONI[sez].forma.file.annuale.replace(/^Credito_[^_]+_/, "").replace(/^./, c => c.toUpperCase());
-    $("notaPeriodo").textContent = trim === 4
-      ? `Con il IV trimestre si crea anche la tabella ${annuale} (dicembre di ogni anno).`
-      : `${annuale} si crea solo con il IV trimestre.`;
+    const sez = sezione(), anno = Number($("anno").value);
+    const S0 = SEZIONI[sez], trim = S0.annuale ? 4 : Number($("trim").value);
+    $("campoTrim").hidden = !!S0.annuale;
+    if (S0.annuale) $("notaPeriodo").textContent = "Dati annuali (al 31 dicembre): si sceglie solo l'anno.";
+    else {
+      const annuale = S0.forma.file.annuale.replace(/^Credito_[^_]+_/, "").replace(/^./, c => c.toUpperCase());
+      $("notaPeriodo").textContent = trim === 4
+        ? `Con il IV trimestre si crea anche la tabella ${annuale} (dicembre di ogni anno).`
+        : `${annuale} si crea solo con il IV trimestre.`;
+    }
     const el = $("controllo");
     if (!stato.dati.valori.size) {
       el.innerHTML = `<p class="nota" style="margin-top:0">Nessun dato caricato.</p>`;
@@ -1138,21 +1267,31 @@ if (typeof module !== "undefined" && module.exports) {
     let html = `<table class="controllo">`;
     const warn = c.avvisi.length ? "warn" : true;
     const f = S.forma.file;
-    const dal = `dal ${nomeTrim(anno - S.anniIndietro, 1)} al ${nomeTrim(anno, trim)}`;
+    const dal = S.annuale ? "" : `dal ${nomeTrim(anno - S.anniIndietro, 1)} al ${nomeTrim(anno, trim)}`;
     const sof = S.schema === "sofferenze";
-    html += riga(f.sintesi, c.ok, `${meseIt(fineTrim(anno, trim))} e ${meseIt(fineTrim(anno - 1, trim))}: Varese, Lombardia, Italia${sof ? " (sofferenze e affidati)" : ""}`);
-    html += riga(f.trimestrale, c.ok ? warn : false, `Varese ${dal}`);
-    if (trim === 4) html += riga(f.annuale, c.ok ? warn : false, `Varese, dicembre ${S.annoIniziale}–${anno}`);
-    if (sof) html += riga(f.impieghi, c.ok ? warn : false, `sofferenze / impieghi in %, Varese, Lombardia, Italia ${dal}`);
-    else html += riga(f.tipo, c.ok ? warn : false, "famiglie consumatrici, imprese private, altro, totale");
-    html += `</table>`;
-    if (!c.ok) {
-      const u = c.ultimo ? `L'ultimo trimestre disponibile è il <b>${esc(nomeTrim(c.ultimo.anno, c.ultimo.trim))}</b>.` : "";
-      html += `<div class="servono">La Banca d'Italia non ha ancora pubblicato (o non ci sono nei dati caricati): ${esc(c.manca.join(", "))}. ${u}
-        I dati di fine trimestre escono ${esc(S.uscita)}.</div>`;
+    if (S.schema === "sportelli") {
+      // l'ATM c'è solo nella Sintesi: la tabella «tempo» ha celle vuote solo se mancano sportelli
+      const vuotiTempo = c.avvisi.some(a => a.startsWith("Varese sportelli")) ? "warn" : true;
+      html += riga(f.sintesi, c.ok ? warn : false, `Varese ${anno - S.anniSintesi + 1}–${anno}: comuni serviti, sportelli, sportelli ogni 100mila abitanti, dipendenti, ATM`);
+      html += riga(f.tempo, c.ok ? vuotiTempo : false, `sportelli di Varese ${S.annoInizioTempo}–${anno}`);
     } else {
-      if (c.avvisi.length) html += `<div class="servono">Mancano alcuni dati (celle vuote): ${esc(c.avvisi.join(", "))}.</div>`;
-      html += `<div class="pronto">Tutto pronto per il ${esc(nomeTrim(anno, trim))}: ${tabelleAttese(sez, trim).length} tabelle ${esc(S.deiNome)}.</div>`;
+      html += riga(f.sintesi, c.ok, `${meseIt(fineTrim(anno, trim))} e ${meseIt(fineTrim(anno - 1, trim))}: Varese, Lombardia, Italia${sof ? " (sofferenze e affidati)" : ""}`);
+      html += riga(f.trimestrale, c.ok ? warn : false, `Varese ${dal}`);
+      if (trim === 4) html += riga(f.annuale, c.ok ? warn : false, `Varese, dicembre ${S.annoIniziale}–${anno}`);
+      if (sof) html += riga(f.impieghi, c.ok ? warn : false, `sofferenze / impieghi in %, Varese, Lombardia, Italia ${dal}`);
+      else html += riga(f.tipo, c.ok ? warn : false, "famiglie consumatrici, imprese private, altro, totale");
+    }
+    html += `</table>`;
+    const periodo = S.annuale ? String(anno) : nomeTrim(anno, trim);
+    if (!c.ok) {
+      const u = !c.ultimo ? "" : S.annuale ? `L'ultimo anno disponibile è il <b>${c.ultimo.anno}</b>.` : `L'ultimo trimestre disponibile è il <b>${esc(nomeTrim(c.ultimo.anno, c.ultimo.trim))}</b>.`;
+      html += `<div class="servono">La Banca d'Italia non ha ancora pubblicato (o non ci sono nei dati caricati): ${esc(c.manca.join(", "))}. ${u}
+        I dati ${S.annuale ? "" : "di fine trimestre "}escono ${esc(S.uscita)}.</div>`;
+    } else {
+      if (c.atmMancante) html += `<div class="servono">${testoAtm(anno)}</div>`;
+      const altri = c.avvisi.filter(a => !a.startsWith("numero di ATM"));
+      if (altri.length) html += `<div class="servono">Mancano alcuni dati (celle vuote): ${esc(altri.join(", "))}.</div>`;
+      html += `<div class="pronto">Tutto pronto per il ${esc(periodo)}: ${tabelleAttese(sez, trim).length} tabelle ${esc(S.deiNome)}.</div>`;
     }
     el.innerHTML = html;
     $("genera").disabled = !c.ok;
@@ -1164,7 +1303,8 @@ if (typeof module !== "undefined" && module.exports) {
     stato.url.forEach(u => URL.revokeObjectURL(u)); stato.url = [];
     $("risultati").hidden = true;
     try {
-      log(`Genero le tabelle ${SEZIONI[sez].deiNome} del ${nomeTrim(anno, trim)}…`);
+      const periodo = SEZIONI[sez].annuale ? String(anno) : nomeTrim(anno, trim);
+      log(`Genero le tabelle ${SEZIONI[sez].deiNome} del ${periodo}…`);
       const esito = generaReport(stato.dati, sez, anno, trim, { log });
       const elenco = $("elenco");
       elenco.innerHTML = "";
@@ -1184,7 +1324,10 @@ if (typeof module !== "undefined" && module.exports) {
       const urlZip = URL.createObjectURL(new Blob([zip], { type: "application/zip" }));
       stato.url.push(urlZip);
       $("zip").href = urlZip; $("zip").download = `${esito.cartella}.zip`;
-      $("titoloRisultati").textContent = `File pronti — ${SEZIONI[sez].nome}, ${nomeTrim(anno, trim)}`;
+      $("titoloRisultati").textContent = `File pronti — ${SEZIONI[sez].nome}, ${SEZIONI[sez].annuale ? "anno " : ""}${periodo}`;
+      $("avvisoRisultati").hidden = !esito.atmMancante;
+      $("avvisoRisultati").innerHTML = esito.atmMancante ? testoAtm(anno) : "";
+      if (esito.atmMancante) log(`ATTENZIONE: nella Sintesi manca il numero di ATM del ${anno} (non ancora pubblicato): cella vuota.`, "warn");
       $("risultati").hidden = false;
       log(`Fatto: ${esito.file.length} file.`, "ok");
     } catch (e) {

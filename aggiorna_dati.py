@@ -36,9 +36,19 @@ TAVOLE = [
     {"codice": "TRI30401", "nome": "Quota delle sofferenze (al lordo delle svalutazioni e al netto dei passaggi a perdita) "
                                    "di pertinenza dei maggiori affidati - per provincia della clientela",
      "filtri": {"SEDELEG_SOGG": TERRITORI}},
+    # sportelli (dati annuali; territorio = LOC_SPORT, nessun settore)
+    {"codice": "TDB20207", "nome": "Banche e sportelli - per provincia e gruppo istituzionale di banche",
+     "filtri": {"LOC_SPORT": TERRITORI, "ENTE_SEGN": ["1100010"]}},
+    {"codice": "TDB20220", "nome": "Numero sportelli per 100.000 abitanti - per provincia",
+     "filtri": {"LOC_SPORT": TERRITORI}},
+    {"codice": "TDB10227", "nome": "Dipendenti - per provincia",
+     "filtri": {"LOC_SPORT": TERRITORI}},
+    # tavola a serie storiche: una colonna per serie «SDP_LOCATM.A.<ente>.<fenomeno>.<territorio>», date «2024/12/31»
+    {"codice": "TSPAG110", "nome": "ATM e POS - per provincia di sportello",
+     "serie": TERRITORI},
 ]
 # colonne che devono esserci in ogni tavola (oltre a quelle dei filtri)
-OBBLIGATORIE = ["DATA_OSS", "ENTE_SEGN", "FENEC", "SET_CTP", "VALORE"]
+OBBLIGATORIE = ["DATA_OSS", "ENTE_SEGN", "FENEC", "VALORE"]
 
 
 def scarica(url, tentativi=4):
@@ -82,6 +92,19 @@ def filtra(testo, filtri):
     return testa, tenute
 
 
+def filtra_serie(testo, territori):
+    """Tavola a serie storiche: tiene DATA_OSS e le colonne dei territori indicati, e le righe con almeno un valore."""
+    righe = csv.reader(io.StringIO(testo), delimiter=";")
+    testa = next(righe)
+    if "DATA_OSS" not in testa:
+        raise RuntimeError("colonna DATA_OSS mancante nel CSV")
+    tieni = [testa.index("DATA_OSS")] + [j for j, c in enumerate(testa) if c.count(".") >= 4 and c.rsplit(".", 1)[1] in territori]
+    if len(tieni) == 1:
+        raise RuntimeError("nessuna serie dei territori richiesti")
+    tenute = [[r[j] for j in tieni] for r in righe if len(r) >= len(testa) and any(r[j].strip() for j in tieni[1:])]
+    return [testa[j] for j in tieni], tenute
+
+
 def scrivi_csv(percorso, testa, righe):
     buf = io.StringIO()
     w = csv.writer(buf, delimiter=";", quoting=csv.QUOTE_ALL, lineterminator="\n")
@@ -107,17 +130,17 @@ def main():
         print(f"{cod}: scarico…", flush=True)
         try:
             nome, testo = leggi_csv_zip(scarica(URL.format(codice=cod)))
-            testa, righe = filtra(testo, t["filtri"])
+            testa, righe = filtra_serie(testo, t["serie"]) if "serie" in t else filtra(testo, t["filtri"])
             if not righe:
                 raise RuntimeError("nessuna riga per i territori richiesti")
             i_data = testa.index("DATA_OSS")
-            ultimo = max(r[i_data] for r in righe)
+            ultimo = max(r[i_data] for r in righe).replace("/", "-")   # le serie storiche scrivono 2024/12/31
             prima = info.get(cod, {}).get("ultimo_dato")
             if prima and ultimo < prima:
                 raise RuntimeError(f"i dati scaricati arrivano al {ultimo}, quelli salvati al {prima}: tengo i vecchi")
             scrivi_csv(os.path.join(CARTELLA, f"{cod}.csv"), testa, righe)
             info[cod] = {"nome": t["nome"], "file_banca_italia": nome, "scaricato": adesso,
-                         "ultimo_dato": ultimo, "righe": len(righe), "filtri": t["filtri"]}
+                         "ultimo_dato": ultimo, "righe": len(righe), "filtri": t.get("filtri") or {"territori": t["serie"]}}
             print(f"{cod}: {len(righe)} righe, ultimo dato {ultimo}", flush=True)
         except Exception as e:
             errori.append(f"{cod}: {e}")
