@@ -2,7 +2,7 @@
  "TDB10290": {
   "nome": "Depositi (esclusi PCT) - per provincia, settore e sottosettore della clientela",
   "file_banca_italia": "20260828_080650-STAMEN-TDB10290.csv",
-  "scaricato": "2026-09-29T07:39:18Z",
+  "scaricato": "2026-09-29T07:49:45Z",
   "ultimo_dato": "2026-06-30",
   "righe": 12055,
   "filtri": {
@@ -16,5 +16,5 @@
    ]
   }
  },
- "controllato": "2026-09-29T07:39:18Z"
+ "controllato": "2026-09-29T07:49:45Z"
 }
