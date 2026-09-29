@@ -22,10 +22,11 @@ COME SI USA (ogni trimestre)
 
 TABELLE PRODOTTE (nomi come le tabelle di Osserva, in formato .xlsx, foglio «Foglio1»)
 - Credito_Depositi_Sintesi.xlsx            Varese, Lombardia, Italia: fine trimestre, stesso mese dell'anno prima, variazione %
+                                           (colonne intestate con il trimestre, es. «I trim 2026 (milioni di euro)» e «I trim 2025 (milioni di euro)»)
 - Credito_Depositi_Tempo-trimestrale.xlsx  Varese a fine trimestre dal I trim di 5 anni prima, variazione tendenziale
 - Credito_Depositi_Tempo-annuale.xlsx      SOLO con il IV trimestre: Varese a dicembre di ogni anno dal 2011
 - Credito_Depositi_Tipo-clientela.xlsx     Varese: famiglie consumatrici, imprese private, altro, totale
-Valori in migliaia di euro arrotondati; variazioni con 2 decimali (come ARROTONDA di Excel).
+Valori in MILIONI di euro arrotondati (la Banca d'Italia li dà in migliaia); variazioni con 2 decimali (come ARROTONDA di Excel).
 I numeri sono salvati come numeri veri (non testo).
 
 QUANDO ESCONO I DATI

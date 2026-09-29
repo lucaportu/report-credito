@@ -153,7 +153,7 @@
     <details open>
       <summary>Depositi: tabelle prodotte, dati usati e regole</summary>
       <ul>
-        <li><b>Credito_Depositi_Sintesi</b>: depositi di Varese, Lombardia e Italia a fine trimestre, confrontati con lo stesso mese dell'anno prima.</li>
+        <li><b>Credito_Depositi_Sintesi</b>: depositi di Varese, Lombardia e Italia a fine trimestre, confrontati con lo stesso mese dell'anno prima (colonne intestate con il trimestre, es. «I trim 2026» e «I trim 2025»).</li>
         <li><b>Credito_Depositi_Tempo-trimestrale</b>: depositi di Varese a fine trimestre dal I trim di 5 anni prima, con la variazione tendenziale.</li>
         <li><b>Credito_Depositi_Tempo-annuale</b>: solo con il IV trimestre, depositi di Varese a dicembre di ogni anno dal 2011.</li>
         <li><b>Credito_Depositi_Tipo-clientela</b>: Varese a fine trimestre, dal I trim di 5 anni prima: famiglie consumatrici, imprese private (al netto delle captive), altro = totale − famiglie − imprese, totale.</li>
@@ -161,7 +161,7 @@
       <p class="nota">Fonte: tavola <b>TDB10290</b> «Depositi (esclusi PCT) – per provincia, settore e sottosettore della clientela», ente segnalante
         «Banche e Cassa depositi e prestiti». Totale = «Clientela residente e non residente al netto delle Istituzioni finanziarie monetarie».
         I depositi sono consistenze a <b>fine mese</b>: il trimestre è il mese di fine trimestre (marzo, giugno, settembre, dicembre), nessuna somma.
-        Valori in migliaia di euro arrotondati all'unità; variazioni calcolate sui valori non arrotondati e arrotondate a 2 decimali come ARROTONDA di Excel.
+        Valori in <b>milioni di euro</b> arrotondati all'unità (la Banca d'Italia li dà in migliaia); variazioni calcolate sui valori non arrotondati e arrotondate a 2 decimali come ARROTONDA di Excel.
         Le tabelle vengono ricalcolate ogni volta sui dati più recenti: la Banca d'Italia rivede i dati dell'anno precedente, quindi anche i trimestri passati possono cambiare leggermente.</p>
       <p class="nota">La Banca d'Italia pubblica le tavole mensili tra il 27 e il 31 di ogni mese, con circa due mesi di ritardo (es. i dati di marzo a fine maggio).
         I dati automatici vengono scaricati il giorno 2 di ogni mese. I file che carichi restano sul tuo computer.</p>
@@ -245,7 +245,8 @@ function round0(x) {
   const a = Math.round(Number(Math.abs(x).toPrecision(15)));
   return x < 0 && a !== 0 ? -a : a;
 }
-const migliaia = v => v == null ? null : round0(v / 1000);
+// la tavola è in migliaia di euro (SCALA = 3): diviso 1000 = milioni di euro
+const milioni = v => v == null ? null : round0(v / 1000);
 const variaz = (n, o) => (n == null || o == null || o === 0) ? null : round2(n / o * 100 - 100);
 
 /* ------------------------------------------------------------------ lettura ZIP / XLSX */
@@ -597,10 +598,11 @@ function tabelleDepositi(dati, anno, trim) {
     nome: "Credito_Depositi_Sintesi.xlsx",
     tab: {
       foglio: "Foglio1", colValori: [3, 4], colPct: [5],
-      intest: ["Ordinamento", "Territorio", "periodo recente (migliaia di euro)", "periodo passato (migliaia di euro)", "T.var% tend"],
+      // intestazioni con il trimestre (richiesta dell'utente 29/09/2026), es. «I trim 2026 (milioni di euro)» | «I trim 2025 (milioni di euro)»
+      intest: ["Ordinamento", "Territorio", `${nomeTrim(anno, trim)} (milioni di euro)`, `${nomeTrim(anno - 1, trim)} (milioni di euro)`, "T.var% tend"],
       righe: TERRITORI.map(([loc, nome], i) => {
         const n = tot(loc, anno, trim), o = tot(loc, anno - 1, trim);
-        return [i + 1, nome, migliaia(n), migliaia(o), variaz(n, o)];
+        return [i + 1, nome, milioni(n), milioni(o), variaz(n, o)];
       }),
     },
   });
@@ -614,7 +616,7 @@ function tabelleDepositi(dati, anno, trim) {
     tab: {
       foglio: "Foglio1", colValori: [3], colPct: [4],
       intest: ["Anno", "Trimestre", "Depositi", "T var% tend"],
-      righe: trimestri.map(([a, t]) => [a, nomeTrim(a, t), migliaia(tot("ITC41", a, t)), variaz(tot("ITC41", a, t), tot("ITC41", a - 1, t))]),
+      righe: trimestri.map(([a, t]) => [a, nomeTrim(a, t), milioni(tot("ITC41", a, t)), variaz(tot("ITC41", a, t), tot("ITC41", a - 1, t))]),
     },
   });
 
@@ -623,7 +625,7 @@ function tabelleDepositi(dati, anno, trim) {
     const righe = [];
     for (let a = S.annoIniziale; a <= anno; a++) {
       const n = tot("ITC41", a, 4), o = tot("ITC41", a - 1, 4);
-      righe.push([a, migliaia(n), o == null && a === S.annoIniziale ? "_" : variaz(n, o)]);
+      righe.push([a, milioni(n), o == null && a === S.annoIniziale ? "_" : variaz(n, o)]);
     }
     tabelle.push({
       nome: "Credito_Depositi_Tempo-annuale.xlsx",
@@ -639,7 +641,7 @@ function tabelleDepositi(dati, anno, trim) {
       intest: ["Anno", "Periodo", "Famiglie", "Imprese private", "Altro", "Totale"],
       righe: trimestri.map(([a, t]) => {
         const d = fineTrim(a, t);
-        const fam = migliaia(g("ITC41", S.settori.famiglie, d)), imp = migliaia(g("ITC41", S.settori.imprese, d)), to = migliaia(g("ITC41", S.settori.totale, d));
+        const fam = milioni(g("ITC41", S.settori.famiglie, d)), imp = milioni(g("ITC41", S.settori.imprese, d)), to = milioni(g("ITC41", S.settori.totale, d));
         return [a, nomeTrim(a, t), fam, imp, (fam == null || imp == null || to == null) ? null : to - fam - imp, to];
       }),
     },
