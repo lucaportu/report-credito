@@ -1,0 +1,55 @@
+REPORT CREDITO – BANCA D'ITALIA (Varese · Lombardia · Italia)
+==============================================================
+Versione 1.0 – 29/09/2026. Sezione pronta: DEPOSITI. In preparazione: impieghi, sofferenze, sportelli.
+
+A COSA SERVE
+Crea le tabelle Excel per Osserva sui depositi bancari, con i dati della Banca d'Italia
+(tavola TDB10290 «Depositi (esclusi PCT) – per provincia, settore e sottosettore della clientela»).
+Non serve installare niente: è una pagina web che funziona nel browser (Chrome, Edge, Firefox, Safari).
+
+COME SI USA (ogni trimestre)
+1. Apri la pagina (sito pubblicato oppure doppio clic su index.html).
+2. Guarda il riquadro «2 · Dati della Banca d'Italia»:
+   - se è VERDE («Dati automatici: TDB10290 fino a …») i dati sono già caricati, non devi fare niente;
+   - se è ARANCIONE, oppure il mese indicato è vecchio:
+       a) clicca «Scarica TDB10290 dalla Banca d'Italia»: il browser scarica il file
+          BANKITALIA_DIFF_TDB10290.zip (circa 5 MB) nella cartella Download;
+       b) trascina quel file ZIP nel riquadro tratteggiato (o clicca il riquadro e sceglilo).
+          Non serve aprirlo o scompattarlo.
+3. Scegli anno e trimestre (la pagina propone da sola l'ultimo trimestre disponibile).
+4. Nel riquadro «3 · Controllo e tabelle» controlla che le tabelle siano «pronte» e premi «Genera tabelle».
+5. Scarica i file uno per uno oppure tutti insieme con «Scarica tutto (ZIP)».
+
+TABELLE PRODOTTE (nomi come le tabelle di Osserva, in formato .xlsx, foglio «Foglio1»)
+- Credito_Depositi_Sintesi.xlsx            Varese, Lombardia, Italia: fine trimestre, stesso mese dell'anno prima, variazione %
+- Credito_Depositi_Tempo-trimestrale.xlsx  Varese a fine trimestre dal I trim di 5 anni prima, variazione tendenziale
+- Credito_Depositi_Tempo-annuale.xlsx      SOLO con il IV trimestre: Varese a dicembre di ogni anno dal 2011
+- Credito_Depositi_Tipo-clientela.xlsx     Varese: famiglie consumatrici, imprese private, altro, totale
+Valori in migliaia di euro arrotondati; variazioni con 2 decimali (come ARROTONDA di Excel).
+I numeri sono salvati come numeri veri (non testo).
+
+QUANDO ESCONO I DATI
+La Banca d'Italia pubblica i dati mensili tra il 27 e il 31 di ogni mese, con circa due mesi di ritardo:
+   marzo → fine maggio · giugno → fine agosto · settembre → fine novembre · dicembre → fine febbraio.
+I dati automatici vengono scaricati il giorno 2 di ogni mese.
+Se chiedi un trimestre non ancora pubblicato la pagina lo dice e indica l'ultimo disponibile.
+
+DA SAPERE
+- La Banca d'Italia rivede i dati dell'anno precedente: rifacendo le tabelle in giorni diversi
+  i trimestri passati possono cambiare di poco. È normale: la pagina usa sempre i dati più recenti.
+- Nel riquadro si possono trascinare anche i prospetti Excel scaricati a mano dal portale
+  (file REPORT_….xlsx) o il CSV contenuto nello ZIP. I dati dei file caricati prevalgono su quelli automatici.
+- I file che carichi restano sul tuo computer: la pagina non li invia a nessuno.
+
+CONTENUTO DELLA CARTELLA
+- index.html                             la pagina
+- LEGGIMI.txt                            queste istruzioni
+- dati/TDB10290.csv                      dati automatici (solo Varese, Lombardia, Italia), aggiornati dal computer di GitHub
+- dati/aggiornamento.json                data dell'ultimo scaricamento
+- aggiorna_dati.py                       programma che scarica e filtra i dati (lo usa GitHub; a mano: python3 aggiorna_dati.py)
+- .github/workflows/aggiorna-dati.yml    istruzioni per GitHub: quando lanciare aggiorna_dati.py (il 2 di ogni mese)
+
+AGGIORNAMENTO AUTOMATICO (GitHub)
+Sul sito pubblicato i dati si aggiornano da soli il giorno 2 di ogni mese.
+Per forzare un aggiornamento: sul repository GitHub → scheda «Actions» → «Aggiorna dati Banca d'Italia» → «Run workflow».
+Se l'aggiornamento non riesce, GitHub manda un'e-mail: nel frattempo si usa lo ZIP (passo 2).

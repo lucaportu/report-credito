@@ -1,0 +1,998 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Report Credito Banca d'Italia</title>
+<style>
+  :root {
+    --bg: #eef1f8; --surface: #ffffff; --surface-2: #f7f9fd; --line: #e3e8f2; --line-2: #d5dcea;
+    --primary: #2c6bed; --primary-d: #1e54c8; --primary-soft: #e7eefe;
+    --navy: #16315e; --text: #1a2334; --muted: #69748a;
+    --ok: #1b8a4b; --ok-soft: #e3f4ea; --err: #c0392b; --err-soft: #fdecea; --warn-soft: #fbeddd; --warn: #8a4b12;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+         font: 15px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; }
+  header { background: linear-gradient(90deg, var(--navy), var(--primary)); color: #fff; padding: 22px 16px; }
+  .wrap { max-width: 980px; margin: 0 auto; padding-inline: 16px; }
+  header .wrap { padding-inline: 0; }
+  header h1 { margin: 0; font-size: 1.5rem; }
+  header p { margin: 4px 0 0; color: #c5d6f2; font-size: .95rem; }
+  main { padding-block: 20px 40px; }
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 18px; margin-bottom: 16px; }
+  .card h2 { margin: 0 0 12px; font-size: .8rem; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+  .card h3 { margin: 18px 0 8px; font-size: .95rem; }
+  .riga { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end; }
+  label.campo { display: flex; flex-direction: column; gap: 4px; font-weight: 600; font-size: .9rem; }
+  select { font: inherit; padding: 8px 10px; border: 1px solid var(--line-2); border-radius: 8px; background: var(--surface-2); color: var(--text); min-width: 130px; }
+  button { font: inherit; font-weight: 700; border-radius: 10px; padding: 10px 18px; cursor: pointer; border: 1px solid transparent; }
+  .primario { background: var(--primary); color: #fff; }
+  .primario:hover { background: var(--primary-d); }
+  .secondario { background: var(--surface-2); color: var(--primary-d); border-color: var(--line-2); }
+  button:disabled { opacity: .5; cursor: not-allowed; }
+  .spazio { flex: 1 1 auto; }
+  .nota { color: var(--muted); font-size: .88rem; margin: 10px 0 0; }
+  #log { background: var(--surface-2); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; min-height: 70px; max-height: 360px; overflow: auto;
+         font: 13px/1.55 ui-monospace, Menlo, Consolas, monospace; white-space: pre-wrap; margin: 0; }
+  .ok { color: var(--ok); } .err { color: var(--err); } .muted { color: var(--muted); } .warn { color: var(--warn); }
+  [hidden] { display: none !important; }
+  .sezioni { display: flex; gap: 10px; flex-wrap: wrap; }
+  .sezione { display: flex; align-items: center; gap: 8px; border: 1px solid var(--line-2); border-radius: 10px; padding: 10px 14px; background: var(--surface-2); cursor: pointer; font-weight: 600; }
+  .sezione:has(input:checked) { border-color: var(--primary); background: var(--primary-soft); }
+  .sezione.off { opacity: .55; cursor: not-allowed; font-weight: 400; }
+  .fonte { display: flex; gap: 12px; align-items: flex-start; border-radius: 10px; padding: 12px 14px; border: 1px solid var(--line); background: var(--surface-2); }
+  .fonte.ok { border-color: #9fd3b4; background: var(--ok-soft); color: var(--text); }
+  .fonte.warn { border-color: #e0a15a; background: var(--warn-soft); color: var(--text); }
+  .fonte .icona { font-size: 1.3rem; line-height: 1.2; }
+  .fonte b { display: block; }
+  .fonte .dett { font-size: .86rem; color: var(--muted); }
+  .passi { margin: 8px 0 0; padding-left: 22px; font-size: .92rem; }
+  .passi li { margin: 4px 0; }
+  a.bottone { display: inline-block; background: var(--surface); color: var(--primary-d); border: 1px solid var(--line-2); padding: 7px 14px; border-radius: 9px; font-weight: 700; text-decoration: none; }
+  a.bottone:hover { border-color: var(--primary); }
+  .drop { display: block; border: 2px dashed var(--line-2); border-radius: 12px; padding: 16px; background: var(--surface-2); cursor: pointer; margin-top: 12px; text-align: center; }
+  .drop:hover, .drop.sopra { border-color: var(--primary); background: var(--primary-soft); }
+  .drop .descr { font-size: .84rem; color: var(--muted); }
+  .drop input { display: none; }
+  .lista-file { list-style: none; padding: 0; margin: 10px 0 0; font-size: .88rem; }
+  .lista-file li { display: flex; justify-content: space-between; gap: 8px; padding: 6px 0; border-top: 1px solid var(--line); }
+  .lista-file li.errore { color: var(--err); }
+  .togli { background: none; border: 0; padding: 0 2px; font-size: 1rem; line-height: 1; color: var(--muted); cursor: pointer; }
+  .togli:hover { color: var(--err); }
+  table.controllo { width: 100%; border-collapse: collapse; font-size: .88rem; }
+  table.controllo td { padding: 6px 8px; border-top: 1px solid var(--line); vertical-align: top; }
+  table.controllo td:first-child { white-space: nowrap; font-weight: 600; }
+  table.controllo td:nth-child(2) { white-space: nowrap; }
+  table.controllo .dett { color: var(--muted); font-size: .82rem; width: 100%; }
+  .badge { display: inline-block; font-size: .74rem; border-radius: 999px; padding: 1px 9px; background: var(--line); color: var(--muted); white-space: nowrap; font-weight: 600; }
+  .badge.ok { background: var(--ok-soft); color: var(--ok); }
+  .badge.warn { background: var(--warn-soft); color: var(--warn); }
+  .badge.err { background: var(--err-soft); color: var(--err); }
+  .servono { margin: 12px 0 0; padding: 10px 12px; border-radius: 8px; background: var(--warn-soft); color: var(--warn); font-size: .9rem; }
+  .pronto { margin: 12px 0 0; padding: 10px 12px; border-radius: 8px; background: var(--ok-soft); color: var(--ok); font-size: .9rem; font-weight: 600; }
+  .file { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+  .file:last-child { border-bottom: 0; }
+  .file span { overflow-wrap: anywhere; }
+  a.scarica { color: var(--primary); font-weight: 700; text-decoration: none; white-space: nowrap; }
+  a.scarica:hover { text-decoration: underline; }
+  a.zip { display: inline-block; background: var(--primary); color: #fff; padding: 10px 18px; border-radius: 10px; font-weight: 700; text-decoration: none; margin: 0 8px 8px 0; }
+  a.zip:hover { background: var(--primary-d); }
+  ul { padding-left: 20px; margin: 8px 0; }
+  code { font: 600 .84rem ui-monospace, Menlo, Consolas, monospace; }
+  footer { color: var(--muted); font-size: .8rem; text-align: center; padding-bottom: 24px; }
+</style>
+</head>
+<body>
+<header><div class="wrap">
+  <h1>💶 Report Credito – Banca d'Italia</h1>
+  <p>Varese · Lombardia · Italia — tabelle Excel per Osserva dai dati della Base Dati Statistica della Banca d'Italia</p>
+</div></header>
+
+<main class="wrap">
+  <section class="card">
+    <h2>1 · Sezione e periodo</h2>
+    <div class="sezioni">
+      <label class="sezione"><input type="radio" name="sezione" value="depositi" checked> Depositi</label>
+      <label class="sezione off" title="In preparazione"><input type="radio" name="sezione" value="impieghi" disabled> Impieghi <span class="badge">in preparazione</span></label>
+      <label class="sezione off" title="In preparazione"><input type="radio" name="sezione" value="sofferenze" disabled> Sofferenze <span class="badge">in preparazione</span></label>
+      <label class="sezione off" title="In preparazione"><input type="radio" name="sezione" value="sportelli" disabled> Sportelli <span class="badge">in preparazione</span></label>
+    </div>
+    <div class="riga" style="margin-top:16px">
+      <label class="campo">Anno <select id="anno"></select></label>
+      <label class="campo">Trimestre
+        <select id="trim">
+          <option value="1">I trimestre</option><option value="2">II trimestre</option>
+          <option value="3">III trimestre</option><option value="4">IV trimestre</option>
+        </select>
+      </label>
+    </div>
+    <p class="nota" id="notaPeriodo"></p>
+  </section>
+
+  <section class="card">
+    <h2>2 · Dati della Banca d'Italia</h2>
+    <div id="fonte" class="fonte"><span class="icona">⏳</span><div><b>Cerco i dati aggiornati automaticamente…</b></div></div>
+    <h3>Se i dati automatici mancano o non sono aggiornati</h3>
+    <ol class="passi">
+      <li>Scarica la tavola dalla Banca d'Italia (file ZIP di circa 5 MB, si salva nei Download):
+        <a class="bottone" id="linkA2A" href="#" rel="noopener">⬇ Scarica <span id="nomeTavola">TDB10290</span> dalla Banca d'Italia</a></li>
+      <li>Trascina qui sotto il file ZIP scaricato (<code id="nomeZip">BANKITALIA_DIFF_TDB10290.zip</code>).</li>
+    </ol>
+    <label class="drop" id="drop">
+      <input type="file" id="scegli" multiple accept=".zip,.csv,.xlsx">
+      <b>Trascina qui il file ZIP della Banca d'Italia</b> oppure clicca per sceglierlo
+      <div class="descr">Vanno bene anche il CSV dentro lo ZIP e i prospetti Excel scaricati a mano dal portale (REPORT_….xlsx).
+        I dati dei file caricati prevalgono su quelli automatici.</div>
+    </label>
+    <ul class="lista-file" id="listaFile"></ul>
+  </section>
+
+  <section class="card">
+    <h2>3 · Controllo e tabelle</h2>
+    <div id="controllo"></div>
+    <div class="riga" style="margin-top:14px">
+      <span class="spazio"></span>
+      <button id="genera" class="primario" disabled>⬇ Genera tabelle</button>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>Stato</h2>
+    <pre id="log"><span class="muted">In attesa dei dati.</span></pre>
+  </section>
+
+  <section class="card" id="risultati" hidden>
+    <h2>File pronti</h2>
+    <a id="zip" class="zip" href="#">⬇ Scarica tutto (ZIP)</a>
+    <div id="elenco"></div>
+  </section>
+
+  <section class="card">
+    <h2>Come funziona</h2>
+    <details open>
+      <summary>Depositi: tabelle prodotte, dati usati e regole</summary>
+      <ul>
+        <li><b>Credito_Depositi_Sintesi</b>: depositi di Varese, Lombardia e Italia a fine trimestre, confrontati con lo stesso mese dell'anno prima.</li>
+        <li><b>Credito_Depositi_Tempo-trimestrale</b>: depositi di Varese a fine trimestre dal I trim di 5 anni prima, con la variazione tendenziale.</li>
+        <li><b>Credito_Depositi_Tempo-annuale</b>: solo con il IV trimestre, depositi di Varese a dicembre di ogni anno dal 2011.</li>
+        <li><b>Credito_Depositi_Tipo-clientela</b>: Varese a fine trimestre, dal I trim di 5 anni prima: famiglie consumatrici, imprese private (al netto delle captive), altro = totale − famiglie − imprese, totale.</li>
+      </ul>
+      <p class="nota">Fonte: tavola <b>TDB10290</b> «Depositi (esclusi PCT) – per provincia, settore e sottosettore della clientela», ente segnalante
+        «Banche e Cassa depositi e prestiti». Totale = «Clientela residente e non residente al netto delle Istituzioni finanziarie monetarie».
+        I depositi sono consistenze a <b>fine mese</b>: il trimestre è il mese di fine trimestre (marzo, giugno, settembre, dicembre), nessuna somma.
+        Valori in migliaia di euro arrotondati all'unità; variazioni calcolate sui valori non arrotondati e arrotondate a 2 decimali come ARROTONDA di Excel.
+        Le tabelle vengono ricalcolate ogni volta sui dati più recenti: la Banca d'Italia rivede i dati dell'anno precedente, quindi anche i trimestri passati possono cambiare leggermente.</p>
+      <p class="nota">La Banca d'Italia pubblica le tavole mensili tra il 27 e il 31 di ogni mese, con circa due mesi di ritardo (es. i dati di marzo a fine maggio).
+        I dati automatici vengono scaricati il giorno 2 di ogni mese. I file che carichi restano sul tuo computer.</p>
+    </details>
+  </section>
+</main>
+<footer>Fonte: Banca d'Italia – Base Dati Statistica · elaborazione Camera di Commercio di Varese · versione 1.0</footer>
+
+<script id="motore">
+"use strict";
+/* ==========================================================================
+   MOTORE (nessuna libreria esterna: lettura ZIP/CSV/Excel, calcoli, Excel e ZIP)
+   ========================================================================== */
+class ErroreDati extends Error {}
+
+const URL_A2A = "https://a2a.bancaditalia.it/infostat/dataservices/export/IT/CSV/DATA/CUBE/BANKITALIA/DIFF/";
+// dati filtrati dall'aggiornamento automatico (GitHub Actions): stessa cartella del sito, oppure il sito pubblicato
+const URL_DATI_ONLINE = "https://lucaportu.github.io/report-credito/dati/";
+
+const TERRITORI = [["ITC41", "Varese"], ["ITC4", "Lombardia"], ["IT", "Italia"]];
+const ROMANI = ["I", "II", "III", "IV"];
+const MESI_IT = ["gennaio", "febbraio", "marzo", "aprile", "maggio", "giugno", "luglio", "agosto", "settembre", "ottobre", "novembre", "dicembre"];
+
+// Una voce per sezione. Le sezioni senza «pronta» compaiono nella pagina ma non si possono ancora usare.
+const SEZIONI = {
+  depositi: {
+    nome: "Depositi", pronta: true, tavola: "TDB10290", fenec: "1041810", ente: "1070001",
+    titolo: "Depositi (esclusi PCT) - per provincia, settore e sottosettore della clientela",
+    settori: { totale: "SBI59", famiglie: "600", imprese: "S11BI32" },
+    annoIniziale: 2011, cartella: "Report_credito_depositi",
+  },
+};
+
+// Etichette dei prospetti scaricati a mano dal portale (per leggere i REPORT_….xlsx)
+const ETICHETTE = {
+  ENTE_SEGN: { "banche e cassa depositi e prestiti": "1070001", "banche": "1100010" },
+  FENEC: { "depositi (esclusi pct)": "1041810" },
+  LOC_CTP: { "italia": "IT", "lombardia": "ITC4", "varese": "ITC41" },
+  SET_CTP: {
+    "clientela residente e non residente al netto delle istituzioni finanziarie monetarie": "SBI59",
+    "famiglie consumatrici": "600",
+    "imprese private al netto delle captive": "S11BI32",
+    "imprese private": "S11BI31",
+    "famiglie": "S14",
+    "famiglie produttrici (fino a 5 addetti)": "S14BI2",
+    "società non finanziarie": "S11",
+    "amministrazioni pubbliche": "S13",
+  },
+};
+const NOMI_DIMENSIONI = {
+  "ente segnalante": "ENTE_SEGN", "fenomeno economico": "FENEC",
+  "localizzazione della controparte": "LOC_CTP", "settore istituzionale della controparte": "SET_CTP",
+};
+
+const pad2 = n => String(n).padStart(2, "0");
+const ultimoGiorno = (a, m) => new Date(Date.UTC(a, m, 0)).getUTCDate();
+const fineMese = (a, m) => `${a}-${pad2(m)}-${pad2(ultimoGiorno(a, m))}`;
+const fineTrim = (a, t) => fineMese(a, 3 * t);
+const nomeTrim = (a, t) => `${ROMANI[t - 1]} trim ${a}`;
+const dataIt = iso => iso ? `${iso.slice(8, 10)}/${iso.slice(5, 7)}/${iso.slice(0, 4)}` : "";
+const meseIt = iso => `${MESI_IT[Number(iso.slice(5, 7)) - 1]} ${iso.slice(0, 4)}`;
+// trimestre concluso più recente contenuto in una data AAAA-MM-GG di fine mese
+function trimDaData(iso) {
+  const a = Number(iso.slice(0, 4)), m = Number(iso.slice(5, 7));
+  const t = Math.floor(m / 3);
+  return t === 0 ? { anno: a - 1, trim: 4 } : { anno: a, trim: t };
+}
+
+// arrotondamento a 2 decimali come ARROTONDA di Excel (metà lontano da zero, 15 cifre significative)
+function round2(x) {
+  if (x == null || !Number.isFinite(x)) return null;
+  const a = Math.abs(x);
+  if (a < 1e-6) return 0;
+  const r = Number(Math.round(Number(Number(a.toPrecision(15)) + "e2")) + "e-2");
+  return x < 0 && r !== 0 ? -r : r;
+}
+
+// arrotondamento all'unità come ARROTONDA(x; 0) di Excel (metà lontano da zero)
+function round0(x) {
+  if (x == null || !Number.isFinite(x)) return null;
+  const a = Math.round(Number(Math.abs(x).toPrecision(15)));
+  return x < 0 && a !== 0 ? -a : a;
+}
+const migliaia = v => v == null ? null : round0(v / 1000);
+const variaz = (n, o) => (n == null || o == null || o === 0) ? null : round2(n / o * 100 - 100);
+
+/* ------------------------------------------------------------------ lettura ZIP / XLSX */
+function tipoFile(u8) {
+  if (u8.length >= 4 && u8[0] === 0x50 && u8[1] === 0x4B) return "zip";
+  if (u8.length >= 4 && u8[0] === 0x37 && u8[1] === 0x7A && u8[2] === 0xBC && u8[3] === 0xAF) return "7z";
+  if (u8.length >= 4 && u8[0] === 0xD0 && u8[1] === 0xCF && u8[2] === 0x11 && u8[3] === 0xE0) return "xls";
+  if (u8.length >= 4 && u8[0] === 0x52 && u8[1] === 0x61 && u8[2] === 0x72 && u8[3] === 0x21) return "rar";
+  return "testo";
+}
+
+function indiceZip(u8) {
+  const dv = new DataView(u8.buffer, u8.byteOffset, u8.byteLength);
+  let e = -1;
+  for (let i = u8.length - 22; i >= Math.max(0, u8.length - 65557); i--) if (dv.getUint32(i, true) === 0x06054b50) { e = i; break; }
+  if (e < 0) throw new ErroreDati("Il file compresso (zip/xlsx) è danneggiato o incompleto.");
+  const n = dv.getUint16(e + 10, true);
+  let p = dv.getUint32(e + 16, true);
+  const voci = new Map(), dec = new TextDecoder();
+  for (let k = 0; k < n; k++) {
+    if (dv.getUint32(p, true) !== 0x02014b50) throw new ErroreDati("Il file compresso (zip/xlsx) è danneggiato.");
+    const metodo = dv.getUint16(p + 10, true), comp = dv.getUint32(p + 20, true), dim = dv.getUint32(p + 24, true);
+    const ln = dv.getUint16(p + 28, true), lx = dv.getUint16(p + 30, true), lc = dv.getUint16(p + 32, true), off = dv.getUint32(p + 42, true);
+    const nome = dec.decode(u8.subarray(p + 46, p + 46 + ln)).replace(/\\/g, "/");
+    voci.set(nome, { nome, metodo, comp, dim, off });
+    p += 46 + ln + lx + lc;
+  }
+  return voci;
+}
+
+async function inflateRaw(dati) {
+  if (typeof DecompressionStream === "undefined")
+    throw new ErroreDati("Questo browser è troppo vecchio per leggere i file Excel: aggiorna Chrome, Edge o Firefox.");
+  const flusso = new Blob([dati]).stream().pipeThrough(new DecompressionStream("deflate-raw"));
+  return new Uint8Array(await new Response(flusso).arrayBuffer());
+}
+
+async function estraiZip(u8, voce) {
+  const dv = new DataView(u8.buffer, u8.byteOffset, u8.byteLength);
+  const o = voce.off, inizio = o + 30 + dv.getUint16(o + 26, true) + dv.getUint16(o + 28, true);
+  const dati = u8.subarray(inizio, inizio + voce.comp);
+  if (voce.metodo === 0) return dati;
+  if (voce.metodo === 8) return inflateRaw(dati);
+  throw new ErroreDati(`Formato di compressione non supportato (metodo ${voce.metodo}).`);
+}
+
+const decXml = s => s.indexOf("&") < 0 ? s : s.replace(/&(lt|gt|amp|quot|apos|#x[0-9a-fA-F]+|#\d+);/g, (m, e) =>
+  e === "lt" ? "<" : e === "gt" ? ">" : e === "amp" ? "&" : e === "quot" ? '"' : e === "apos" ? "'"
+  : e[1] === "x" ? String.fromCodePoint(parseInt(e.slice(2), 16)) : String.fromCodePoint(parseInt(e.slice(1), 10)));
+function attributo(s, nome) { const m = new RegExp(`(?:^|\\s)${nome}="([^"]*)"`).exec(s); return m ? decXml(m[1]) : null; }
+function colDaLettere(l) { let n = 0; for (let i = 0; i < l.length; i++) n = n * 26 + l.charCodeAt(i) - 64; return n - 1; }
+function testoRuns(xml) {
+  let s = "";
+  for (const m of xml.replace(/<rPh\b[\s\S]*?<\/rPh>/g, "").matchAll(/<t\b[^>]*?(?:\/>|>([\s\S]*?)<\/t>)/g)) s += m[1] || "";
+  return decXml(s);
+}
+
+// righe[r][c] (indici da 0) con numeri, stringhe o null
+function leggiFoglioXml(xml, condivise) {
+  const righe = [];
+  const reRiga = /<row\b([^>]*?)(?:\/>|>([\s\S]*?)<\/row>)/g;
+  const reCella = /<c\b([^>]*?)(?:\/>|>([\s\S]*?)<\/c>)/g;
+  const reRifRiga = /\br="(\d+)"/, reRif = /\br="([A-Z]+)\d+"/, reTipo = /\bt="(\w+)"/, reV = /<v>([\s\S]*?)<\/v>/;
+  let prossima = 0;
+  for (const mr of xml.matchAll(reRiga)) {
+    const rr = reRifRiga.exec(mr[1]);
+    const ri = rr ? Number(rr[1]) - 1 : prossima;
+    prossima = ri + 1;
+    const riga = [];
+    if (mr[2]) {
+      let col = 0;
+      for (const mc of mr[2].matchAll(reCella)) {
+        const a = mc[1], rif = reRif.exec(a);
+        if (rif) col = colDaLettere(rif[1]);
+        const corpo = mc[2] || "", tt = reTipo.exec(a), t = tt ? tt[1] : "n";
+        let v = null;
+        if (t === "inlineStr") v = testoRuns(corpo);
+        else {
+          const mv = reV.exec(corpo);
+          if (mv) {
+            const s = mv[1];
+            if (t === "s") v = condivise[Number(s)] ?? "";
+            else if (t === "str" || t === "e") v = decXml(s);
+            else if (t === "b") v = s === "1";
+            else { v = Number(s); if (!Number.isFinite(v)) v = decXml(s); }
+          }
+        }
+        riga[col] = v;
+        col += 1;
+      }
+    }
+    righe[ri] = riga;
+  }
+  return righe;
+}
+
+async function apriXlsx(u8) {
+  const voci = indiceZip(u8);
+  const testo = async nome => { const v = voci.get(nome); return v ? new TextDecoder().decode(await estraiZip(u8, v)) : null; };
+  const wb = await testo("xl/workbook.xml");
+  if (wb === null) return null;
+  const rels = (await testo("xl/_rels/workbook.xml.rels")) || "";
+  const target = {};
+  for (const m of rels.matchAll(/<Relationship\b([^>]*?)\/?>/g)) target[attributo(m[1], "Id")] = attributo(m[1], "Target");
+  const fogli = [];
+  for (const m of wb.matchAll(/<sheet\b([^>]*?)\/?>/g)) {
+    const t = target[attributo(m[1], "r:id")];
+    if (!t) continue;
+    const percorso = t.startsWith("/") ? t.slice(1) : ("xl/" + t).replace(/\/\.\//g, "/");
+    fogli.push({ nome: attributo(m[1], "name"), percorso });
+  }
+  let condivise = null;
+  const leggiCondivise = async () => {
+    if (condivise) return condivise;
+    const ss = await testo("xl/sharedStrings.xml");
+    condivise = [];
+    if (ss) for (const m of ss.matchAll(/<si>([\s\S]*?)<\/si>|<si\/>/g)) condivise.push(m[1] ? testoRuns(m[1]) : "");
+    return condivise;
+  };
+  return {
+    nomi: fogli.map(f => f.nome),
+    trova(nome) { const n = nome.toLowerCase().replace(/[\s_]+/g, ""); return fogli.find(f => f.nome.toLowerCase().replace(/[\s_]+/g, "") === n)?.nome ?? null; },
+    async xml(nome) { const f = fogli.find(x => x.nome === nome); return f ? testo(f.percorso) : null; },
+    async righe(nome) { const x = await this.xml(nome); return x === null ? null : leggiFoglioXml(x, await leggiCondivise()); },
+    async primaRiga(nome) {
+      const x = await this.xml(nome);
+      if (x === null) return null;
+      const fine = x.indexOf("</row>");
+      return (leggiFoglioXml(fine > 0 ? x.slice(0, fine + 6) + "</sheetData>" : x, await leggiCondivise())[0]) || [];
+    },
+  };
+}
+
+function testoDaU8(u8) {
+  let t = new TextDecoder("utf-8").decode(u8);
+  if (t.includes("�")) t = new TextDecoder("windows-1252").decode(u8);
+  return t.charCodeAt(0) === 0xFEFF ? t.slice(1) : t;
+}
+
+/* ------------------------------------------------------------------ archivio dei dati */
+// chiave: ENTE_SEGN|FENEC|LOC_CTP|SET_CTP|DATA_OSS  ->  valore (come nella tavola: migliaia di euro)
+const chiave = (ente, fenec, loc, set, data) => `${ente}|${fenec}|${loc}|${set}|${data}`;
+
+class DatiCredito {
+  constructor() { this.valori = new Map(); }
+  aggiungi(valori) { for (const [k, v] of valori) this.valori.set(k, v); return this; }
+  get(ente, fenec, loc, set, data) { const v = this.valori.get(chiave(ente, fenec, loc, set, data)); return v === undefined ? null : v; }
+  // data più recente in cui esistono tutte le serie indicate
+  ultimaData(ente, fenec, serie) {
+    const date = new Set();
+    for (const k of this.valori.keys()) { const p = k.split("|"); if (p[0] === ente && p[1] === fenec) date.add(p[4]); }
+    return [...date].sort().reverse().find(d => serie.every(([loc, set]) => this.get(ente, fenec, loc, set, d) != null)) || null;
+  }
+}
+
+/* ------------------------------------------------------------------ lettura dei file della Banca d'Italia */
+const territoriUsati = new Set(TERRITORI.map(t => t[0]));
+
+// CSV del servizio A2A: "DATA_OSS";"ENTE_SEGN";"FENEC";"LOC_CTP";"SET_CTP";"VALORE";"STATUS"
+function leggiCsvBdi(testo) {
+  const nl = testo.indexOf("\n");
+  const testa = (nl < 0 ? testo : testo.slice(0, nl)).replace(/\r$/, "").split(";").map(s => s.replace(/^"|"$/g, "").trim());
+  const col = ["DATA_OSS", "ENTE_SEGN", "FENEC", "LOC_CTP", "SET_CTP", "VALORE"].map(c => testa.indexOf(c));
+  if (col.some(i => i < 0)) throw new ErroreDati("Il file CSV non è una tavola della Banca d'Italia (mancano le colonne DATA_OSS, LOC_CTP, VALORE…).");
+  const [iD, iE, iF, iL, iS, iV] = col;
+  const valori = new Map(), fenec = new Set();
+  let righe = 0, ultima = "";
+  let p = nl + 1;
+  while (p > 0 && p < testo.length) {
+    let q = testo.indexOf("\n", p);
+    if (q < 0) q = testo.length;
+    const linea = testo.slice(p, q);
+    p = q + 1;
+    if (linea.length < 10) continue;
+    righe += 1;
+    const c = linea.replace(/\r$/, "").split(";");
+    const loc = c[iL].replace(/"/g, "");
+    if (!territoriUsati.has(loc)) continue;
+    const vs = (c[iV] || "").replace(/"/g, "").trim();
+    if (vs === "") continue;
+    const v = Number(vs.replace(",", "."));
+    if (!Number.isFinite(v)) continue;
+    const d = c[iD].replace(/"/g, ""), f = c[iF].replace(/"/g, "");
+    valori.set(chiave(c[iE].replace(/"/g, ""), f, loc, c[iS].replace(/"/g, ""), d), v);
+    fenec.add(f);
+    if (d > ultima) ultima = d;
+  }
+  if (!righe) throw new ErroreDati("Il file CSV della Banca d'Italia è vuoto.");
+  if (!valori.size) throw new ErroreDati("Nel file non ci sono dati di Varese, Lombardia o Italia.");
+  return { valori, fenec: [...fenec], ultima, righe };
+}
+
+// data di un prospetto: "30/06/2026", data Excel (numero) o "2026-06-30"
+function dataProspetto(v) {
+  if (typeof v === "number" && v > 20000 && v < 80000) {
+    const d = new Date(Date.UTC(1899, 11, 30) + Math.round(v) * 86400000);
+    return `${d.getUTCFullYear()}-${pad2(d.getUTCMonth() + 1)}-${pad2(d.getUTCDate())}`;
+  }
+  const s = String(v ?? "").trim();
+  let m = /^(\d{1,2})\/(\d{1,2})\/(\d{4})/.exec(s);
+  if (m) return `${m[3]}-${pad2(m[2])}-${pad2(m[1])}`;
+  m = /^(\d{4})-(\d{2})-(\d{2})/.exec(s);
+  return m ? `${m[1]}-${m[2]}-${m[3]}` : null;
+}
+
+// prospetto Excel scaricato a mano dal portale (foglio «Prospetto»):
+// riga 1 codice tavola, poi una riga per ogni dimensione fissa (etichetta | valore),
+// una riga con la dimensione che varia per colonna, «Data dell'osservazione», poi una riga per mese.
+function leggiProspetto(righe) {
+  const norm = s => String(s ?? "").trim().toLowerCase().replace(/\s+/g, " ");
+  const primo = String(righe[0]?.[0] ?? "").trim();
+  const mt = /^(TDB\d+)(?:_(\d+))?$/.exec(primo);
+  if (!mt) throw new ErroreDati("Il file Excel non sembra un prospetto della Banca d'Italia (in A1 manca il codice della tavola, es. TDB10290_1041810).");
+  const fissi = {}, colonne = {};
+  let dimVar = null, inizio = -1;
+  if (mt[2]) fissi.FENEC = mt[2];
+  const codice = (dim, etich) => {
+    const c = ETICHETTE[dim]?.[norm(etich)];
+    if (!c) throw new ErroreDati(`Nel prospetto c'è «${String(etich).trim()}», che la pagina non conosce. Usa il file ZIP della Banca d'Italia.`);
+    return c;
+  };
+  for (let r = 1; r < righe.length; r++) {
+    const riga = righe[r] || [], et = norm(riga[0]);
+    if (et.startsWith("data dell")) {
+      inizio = r + 1;
+      // prospetto di una sola serie (tutte le dimensioni fisse): i valori stanno nella colonna «Valore»
+      if (!dimVar) riga.forEach((v, j) => { if (j > 0 && norm(v) === "valore") colonne[j] = null; });
+      break;
+    }
+    const dim = NOMI_DIMENSIONI[et];
+    if (!dim) continue;
+    const altri = riga.slice(2).map((v, j) => [j + 2, v]).filter(([, v]) => v != null && String(v).trim() !== "");
+    if (riga[1] != null && String(riga[1]).trim() !== "" && !altri.length) fissi[dim] = codice(dim, riga[1]);
+    else if (altri.length) { dimVar = dim; for (const [j, v] of altri) colonne[j] = codice(dim, v); }
+  }
+  if (inizio < 0 || !Object.keys(colonne).length) throw new ErroreDati("Prospetto della Banca d'Italia non riconosciuto (manca la riga «Data dell'osservazione» o la riga dei territori/settori).");
+  for (const d of ["ENTE_SEGN", "FENEC", "LOC_CTP", "SET_CTP"]) if (d !== dimVar && !fissi[d]) throw new ErroreDati(`Nel prospetto manca «${Object.keys(NOMI_DIMENSIONI).find(k => NOMI_DIMENSIONI[k] === d)}».`);
+  const valori = new Map();
+  let ultima = "", n = 0;
+  for (let r = inizio; r < righe.length; r++) {
+    const riga = righe[r] || [], d = dataProspetto(riga[0]);
+    if (!d) continue;
+    n += 1;
+    for (const [j, cod] of Object.entries(colonne)) {
+      const v = typeof riga[j] === "number" ? riga[j] : numeroIT(riga[j]);
+      if (v == null) continue;
+      const k = dimVar ? { ...fissi, [dimVar]: cod } : fissi;
+      if (!territoriUsati.has(k.LOC_CTP)) continue;
+      valori.set(chiave(k.ENTE_SEGN, k.FENEC, k.LOC_CTP, k.SET_CTP, d), v);
+      if (d > ultima) ultima = d;
+    }
+  }
+  if (!valori.size) throw new ErroreDati("Nel prospetto non ci sono dati di Varese, Lombardia o Italia.");
+  return { valori, fenec: [fissi.FENEC || "?"], ultima, righe: n, tavola: mt[1] };
+}
+
+function numeroIT(v) {
+  if (v == null) return null;
+  let s = String(v).trim().replace(/[\s']/g, "");
+  if (!s || s === "-") return null;
+  if (/^-?\d{1,3}(\.\d{3})+(,\d+)?$/.test(s)) s = s.replace(/\./g, "").replace(",", ".");
+  else if (/^-?\d+,\d+$/.test(s)) s = s.replace(",", ".");
+  const n = Number(s);
+  return Number.isFinite(n) ? n : null;
+}
+
+// qualunque file: ZIP della Banca d'Italia, CSV, prospetto .xlsx
+async function leggiFileCredito(nome, u8) {
+  const tipo = tipoFile(u8);
+  if (tipo === "zip") {
+    const voci = indiceZip(u8);
+    if (voci.has("xl/workbook.xml")) {
+      const x = await apriXlsx(u8);
+      const foglio = x.trova("Prospetto") || x.nomi[0];
+      const r = leggiProspetto(await x.righe(foglio));
+      return { ...r, descr: `prospetto Excel ${r.tavola}` };
+    }
+    const csv = [...voci.values()].filter(v => /\.csv$/i.test(v.nome));
+    for (const v of csv) {
+      const testo = testoDaU8(await estraiZip(u8, v));
+      if (/^\s*"?DATA_OSS"?;/.test(testo)) {
+        const r = leggiCsvBdi(testo);
+        const tav = /TDB\d+/.exec(v.nome) || /TDB\d+/.exec(nome);
+        return { ...r, tavola: tav ? tav[0] : null, descr: `ZIP della Banca d'Italia (${v.nome})` };
+      }
+    }
+    throw new ErroreDati("Nello ZIP non c'è una tavola della Banca d'Italia (nessun CSV con la colonna DATA_OSS).");
+  }
+  if (tipo === "testo") {
+    const testo = testoDaU8(u8);
+    if (!/^\s*"?DATA_OSS"?;/.test(testo)) throw new ErroreDati("Il file non è un CSV della Banca d'Italia (la prima colonna deve essere DATA_OSS).");
+    const r = leggiCsvBdi(testo);
+    const tav = /TDB\d+/.exec(nome);
+    return { ...r, tavola: tav ? tav[0] : null, descr: "CSV della Banca d'Italia" };
+  }
+  throw new ErroreDati(tipo === "xls" ? "I file .xls vecchio formato non sono supportati: usa lo ZIP della Banca d'Italia o salva il prospetto come .xlsx."
+    : "Formato non riconosciuto: serve lo ZIP scaricato dalla Banca d'Italia.");
+}
+
+/* ------------------------------------------------------------------ controllo del periodo */
+function serieSezione(sez) {
+  const S = SEZIONI[sez];
+  return [...TERRITORI.map(([loc]) => [loc, S.settori.totale]), ["ITC41", S.settori.famiglie], ["ITC41", S.settori.imprese]];
+}
+
+// ultimo trimestre per cui ci sono tutti i dati della sezione
+function ultimoTrimestre(dati, sez) {
+  const S = SEZIONI[sez];
+  const d = dati.ultimaData(S.ente, S.fenec, serieSezione(sez));
+  if (!d) return null;
+  let { anno, trim } = trimDaData(d);
+  // la data trovata potrebbe non essere di fine trimestre: si cerca all'indietro
+  for (let i = 0; i < 12; i++) {
+    if (serieSezione(sez).every(([loc, set]) => dati.get(S.ente, S.fenec, loc, set, fineTrim(anno, trim)) != null)) return { anno, trim, data: fineTrim(anno, trim) };
+    trim -= 1; if (trim === 0) { trim = 4; anno -= 1; }
+  }
+  return null;
+}
+
+// cosa c'è e cosa manca per il report richiesto
+function controllaPeriodo(dati, sez, anno, trim) {
+  const S = SEZIONI[sez];
+  const g = (loc, set, a, t) => dati.get(S.ente, S.fenec, loc, set, fineTrim(a, t));
+  const ultimo = ultimoTrimestre(dati, sez);
+  const manca = [];
+  for (const [loc, nome] of TERRITORI) {
+    if (g(loc, S.settori.totale, anno, trim) == null) manca.push(`${nome} ${meseIt(fineTrim(anno, trim))}`);
+    if (g(loc, S.settori.totale, anno - 1, trim) == null) manca.push(`${nome} ${meseIt(fineTrim(anno - 1, trim))}`);
+  }
+  const avvisi = [];
+  for (const [set, nome] of [[S.settori.famiglie, "famiglie consumatrici"], [S.settori.imprese, "imprese private"]])
+    if (g("ITC41", set, anno, trim) == null) avvisi.push(`Varese ${nome} di ${meseIt(fineTrim(anno, trim))}`);
+  for (let a = anno - 5; a <= anno; a++) for (let t = 1; t <= 4; t++) {
+    if (a === anno && t > trim) break;
+    if (g("ITC41", S.settori.totale, a, t) == null) avvisi.push(`Varese ${nomeTrim(a, t)}`);
+  }
+  return { ok: manca.length === 0, manca, avvisi, ultimo };
+}
+
+/* ------------------------------------------------------------------ tabelle dei depositi */
+function tabelleDepositi(dati, anno, trim) {
+  const S = SEZIONI.depositi;
+  const g = (loc, set, data) => dati.get(S.ente, S.fenec, loc, set, data);
+  const tot = (loc, a, t) => g(loc, S.settori.totale, fineTrim(a, t));
+  const tabelle = [];
+
+  // Sintesi: fine trimestre dell'anno e dello stesso mese dell'anno prima
+  tabelle.push({
+    nome: "Credito_Depositi_Sintesi.xlsx",
+    tab: {
+      foglio: "Foglio1", colValori: [3, 4], colPct: [5],
+      intest: ["Ordinamento", "Territorio", "periodo recente (migliaia di euro)", "periodo passato (migliaia di euro)", "T.var% tend"],
+      righe: TERRITORI.map(([loc, nome], i) => {
+        const n = tot(loc, anno, trim), o = tot(loc, anno - 1, trim);
+        return [i + 1, nome, migliaia(n), migliaia(o), variaz(n, o)];
+      }),
+    },
+  });
+
+  // trimestri dal I di anno-5 al trimestre scelto
+  const trimestri = [];
+  for (let a = anno - 5; a <= anno; a++) for (let t = 1; t <= 4; t++) if (a < anno || t <= trim) trimestri.push([a, t]);
+
+  tabelle.push({
+    nome: "Credito_Depositi_Tempo-trimestrale.xlsx",
+    tab: {
+      foglio: "Foglio1", colValori: [3], colPct: [4],
+      intest: ["Anno", "Trimestre", "Depositi", "T var% tend"],
+      righe: trimestri.map(([a, t]) => [a, nomeTrim(a, t), migliaia(tot("ITC41", a, t)), variaz(tot("ITC41", a, t), tot("ITC41", a - 1, t))]),
+    },
+  });
+
+  // Tempo annuale: solo con il IV trimestre, dicembre di ogni anno
+  if (trim === 4) {
+    const righe = [];
+    for (let a = S.annoIniziale; a <= anno; a++) {
+      const n = tot("ITC41", a, 4), o = tot("ITC41", a - 1, 4);
+      righe.push([a, migliaia(n), o == null && a === S.annoIniziale ? "_" : variaz(n, o)]);
+    }
+    tabelle.push({
+      nome: "Credito_Depositi_Tempo-annuale.xlsx",
+      tab: { foglio: "Foglio1", colValori: [2], colPct: [3], intest: ["Anno", "Depositi", "T var% tend"], righe },
+    });
+  }
+
+  // Tipo clientela: Altro = Totale - Famiglie - Imprese, sui valori già arrotondati (come il file di lavoro)
+  tabelle.push({
+    nome: "Credito_Depositi_Tipo-clientela.xlsx",
+    tab: {
+      foglio: "Foglio1", colValori: [3, 4, 5, 6], colPct: [],
+      intest: ["Anno", "Periodo", "Famiglie", "Imprese private", "Altro", "Totale"],
+      righe: trimestri.map(([a, t]) => {
+        const d = fineTrim(a, t);
+        const fam = migliaia(g("ITC41", S.settori.famiglie, d)), imp = migliaia(g("ITC41", S.settori.imprese, d)), to = migliaia(g("ITC41", S.settori.totale, d));
+        return [a, nomeTrim(a, t), fam, imp, (fam == null || imp == null || to == null) ? null : to - fam - imp, to];
+      }),
+    },
+  });
+  return tabelle;
+}
+
+/* ------------------------------------------------------------------ generazione completa */
+function generaReport(dati, sez, anno, trim, ctx = {}) {
+  const log = ctx.log || (() => {});
+  const S = SEZIONI[sez];
+  if (!S || !S.pronta) throw new ErroreDati("Sezione non ancora disponibile.");
+  anno = Number(anno); trim = Number(trim);
+  if (![1, 2, 3, 4].includes(trim)) throw new ErroreDati("Trimestre non valido.");
+  const c = controllaPeriodo(dati, sez, anno, trim);
+  if (!c.ok) {
+    const u = c.ultimo ? ` L'ultimo trimestre disponibile è il ${nomeTrim(c.ultimo.anno, c.ultimo.trim)}.` : "";
+    throw new ErroreDati(`Mancano i dati di: ${c.manca.join(", ")}.${u}`);
+  }
+  for (const a of c.avvisi) log(`Manca il dato di ${a}: la cella resta vuota.`, "warn");
+  const tabelle = tabelleDepositi(dati, anno, trim);
+  if (trim !== 4) log("Credito_Depositi_Tempo-annuale non creato: si fa solo con il IV trimestre.", "muted");
+  const file = tabelle.map(t => ({ nome: t.nome, dati: creaXlsx([t.tab]), tab: t.tab }));
+  return { cartella: `${S.cartella}_${anno}_T${trim}`, file, avvisi: c.avvisi };
+}
+
+/* ------------------------------------------------------------------ Excel (.xlsx) */
+const enc = new TextEncoder();
+const xmlEsc = s => String(s).replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, "")
+  .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+function colonna(n) { let s = ""; while (n > 0) { const m = (n - 1) % 26; s = String.fromCharCode(65 + m) + s; n = Math.floor((n - 1) / 26); } return s; }
+function valoreCella(v) {
+  if (v === null || v === undefined) return null;
+  if (typeof v === "number") { if (!Number.isFinite(v)) return null; const r = Number.isInteger(v) ? v : round2(v); return Object.is(r, -0) ? 0 : r; }
+  return v;
+}
+
+const STILI = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+<fonts count="2"><font><sz val="11"/><name val="Calibri"/><family val="2"/></font><font><b/><sz val="11"/><color rgb="FFFFFFFF"/><name val="Calibri"/><family val="2"/></font></fonts>
+<fills count="3"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FF2E75B6"/><bgColor indexed="64"/></patternFill></fill></fills>
+<borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders>
+<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>
+<cellXfs count="4"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="0" fontId="1" fillId="2" borderId="0" xfId="0" applyFont="1" applyFill="1" applyAlignment="1"><alignment horizontal="center" vertical="center" wrapText="1"/></xf><xf numFmtId="3" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/><xf numFmtId="2" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/></cellXfs>
+<cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles>
+</styleSheet>`;
+
+function foglioXml(tab) {
+  const { intest, colValori, colPct } = tab;
+  const righe = tab.righe.map(r => r.map(valoreCella));
+  const larghezze = tab.larghezze || intest.map((h, j) => {
+    let m = String(h).length;
+    for (const r of righe) { const v = r[j]; m = Math.max(m, (v === null || v === undefined || v === "") ? 0 : (typeof v === "number" && colValori.includes(j + 1) ? String(Math.round(v)).length + Math.floor(String(Math.round(Math.abs(v))).length / 3) : String(v).length)); }
+    return Math.min(Math.max(m + 2, 10), 60);
+  });
+  const cellaTesto = (ref, s, stile) => `<c r="${ref}" t="inlineStr"${stile ? ` s="${stile}"` : ""}><is><t xml:space="preserve">${xmlEsc(s)}</t></is></c>`;
+  let xml = `<row r="1">${intest.map((h, j) => cellaTesto(colonna(j + 1) + "1", h, 1)).join("")}</row>`;
+  righe.forEach((r, i) => {
+    const nr = i + 2;
+    let celle = "";
+    r.forEach((v, j) => {
+      if (v === null || v === undefined) return;
+      const ref = colonna(j + 1) + nr;
+      if (typeof v === "number") {
+        const stile = tab.righePct && tab.righePct.includes(i) ? 3 : colValori.includes(j + 1) ? 2 : colPct.includes(j + 1) ? 3 : 0;
+        celle += `<c r="${ref}"${stile ? ` s="${stile}"` : ""}><v>${String(v)}</v></c>`;
+      } else celle += cellaTesto(ref, v, 0);
+    });
+    xml += `<row r="${nr}">${celle}</row>`;
+  });
+  return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+<sheetViews><sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/><selection pane="bottomLeft" activeCell="A2" sqref="A2"/></sheetView></sheetViews>
+<sheetFormatPr defaultRowHeight="15"/>
+<cols>${larghezze.map((w, j) => `<col min="${j + 1}" max="${j + 1}" width="${w}" customWidth="1"/>`).join("")}</cols>
+<sheetData>${xml}</sheetData>
+</worksheet>`;
+}
+
+// tabs: [{foglio, intest, righe, colValori, colPct}] -> file .xlsx (un foglio per tabella)
+function creaXlsx(tabs) {
+  const n = tabs.length, idx = [...Array(n).keys()];
+  const parti = [
+    ["[Content_Types].xml", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>${idx.map(i => `<Override PartName="/xl/worksheets/sheet${i + 1}.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>`).join("")}<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/></Types>`],
+    ["_rels/.rels", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>`],
+    ["xl/workbook.xml", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets>${idx.map(i => `<sheet name="${xmlEsc(tabs[i].foglio)}" sheetId="${i + 1}" r:id="rId${i + 1}"/>`).join("")}</sheets></workbook>`],
+    ["xl/_rels/workbook.xml.rels", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">${idx.map(i => `<Relationship Id="rId${i + 1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet${i + 1}.xml"/>`).join("")}<Relationship Id="rId${n + 1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>`],
+    ["xl/styles.xml", STILI],
+    ...idx.map(i => [`xl/worksheets/sheet${i + 1}.xml`, foglioXml(tabs[i])]),
+  ];
+  return creaZip(parti.map(([nome, testo]) => ({ nome, dati: enc.encode(testo) })));
+}
+
+/* ------------------------------------------------------------------ ZIP (senza compressione) */
+const CRC_TAB = (() => { const t = new Uint32Array(256); for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
+function crc32(b) { let c = 0xFFFFFFFF; for (let i = 0; i < b.length; i++) c = CRC_TAB[(c ^ b[i]) & 0xFF] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0; }
+
+function creaZip(voci, data = new Date()) {
+  const ora = ((data.getHours() << 11) | (data.getMinutes() << 5) | Math.floor(data.getSeconds() / 2)) & 0xFFFF;
+  const giorno = (((data.getFullYear() - 1980) << 9) | ((data.getMonth() + 1) << 5) | data.getDate()) & 0xFFFF;
+  const parti = [], centrale = [];
+  let offset = 0;
+  for (const v of voci) {
+    const nome = enc.encode(v.nome), crc = crc32(v.dati), dim = v.dati.length;
+    const lh = new DataView(new ArrayBuffer(30));
+    lh.setUint32(0, 0x04034b50, true); lh.setUint16(4, 20, true); lh.setUint16(6, 0x0800, true); lh.setUint16(8, 0, true);
+    lh.setUint16(10, ora, true); lh.setUint16(12, giorno, true); lh.setUint32(14, crc, true);
+    lh.setUint32(18, dim, true); lh.setUint32(22, dim, true); lh.setUint16(26, nome.length, true); lh.setUint16(28, 0, true);
+    parti.push(new Uint8Array(lh.buffer), nome, v.dati);
+    const ch = new DataView(new ArrayBuffer(46));
+    ch.setUint32(0, 0x02014b50, true); ch.setUint16(4, 20, true); ch.setUint16(6, 20, true); ch.setUint16(8, 0x0800, true);
+    ch.setUint16(10, 0, true); ch.setUint16(12, ora, true); ch.setUint16(14, giorno, true); ch.setUint32(16, crc, true);
+    ch.setUint32(20, dim, true); ch.setUint32(24, dim, true); ch.setUint16(28, nome.length, true);
+    ch.setUint32(42, offset, true);
+    centrale.push(new Uint8Array(ch.buffer), nome);
+    offset += 30 + nome.length + dim;
+  }
+  const dimCentrale = centrale.reduce((s, a) => s + a.length, 0);
+  const fine = new DataView(new ArrayBuffer(22));
+  fine.setUint32(0, 0x06054b50, true); fine.setUint16(8, voci.length, true); fine.setUint16(10, voci.length, true);
+  fine.setUint32(12, dimCentrale, true); fine.setUint32(16, offset, true);
+  const tutte = [...parti, ...centrale, new Uint8Array(fine.buffer)];
+  const out = new Uint8Array(tutte.reduce((s, a) => s + a.length, 0));
+  let p = 0;
+  for (const a of tutte) { out.set(a, p); p += a.length; }
+  return out;
+}
+
+if (typeof module !== "undefined" && module.exports) {
+  module.exports = { SEZIONI, TERRITORI, ETICHETTE, DatiCredito, leggiCsvBdi, leggiProspetto, leggiFileCredito, apriXlsx,
+                     ultimoTrimestre, controllaPeriodo, tabelleDepositi, generaReport, creaXlsx, creaZip, round2, round0,
+                     fineTrim, trimDaData, ErroreDati, URL_A2A, URL_DATI_ONLINE };
+}
+</script>
+
+<script>
+"use strict";
+/* ==========================================================================
+   INTERFACCIA
+   ========================================================================== */
+(function () {
+  const $ = id => document.getElementById(id);
+  const XLSX = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+  const stato = { auto: null, autoInfo: null, autoErr: null, file: [], dati: new DatiCredito(), sceltaUtente: false, url: [] };
+  const sezione = () => document.querySelector("input[name=sezione]:checked").value;
+
+  function log(msg, tag) {
+    const el = $("log");
+    if (el.dataset.vuoto !== "no") { el.textContent = ""; el.dataset.vuoto = "no"; }
+    const riga = document.createElement("span");
+    const sim = tag === "ok" ? "✓ " : tag === "err" ? "✗ " : tag === "warn" ? "⚠ " : tag === "muted" ? "ℹ " : "";
+    riga.className = tag || "";
+    riga.textContent = sim + msg + "\n";
+    el.appendChild(riga);
+    el.scrollTop = el.scrollHeight;
+  }
+  const esc = s => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
+  /* ---------- periodo */
+  function riempiAnni(massimo) {
+    const sel = $("anno"), attuale = sel.value;
+    const ultimo = Math.max(massimo || 0, new Date().getFullYear());
+    sel.innerHTML = "";
+    for (let a = ultimo; a >= 2016; a--) sel.add(new Option(String(a), String(a)));
+    if (attuale && [...sel.options].some(o => o.value === attuale)) sel.value = attuale;
+  }
+  function periodoPredefinito() {
+    const u = ultimoTrimestre(stato.dati, sezione());
+    if (!u || stato.sceltaUtente) return;
+    riempiAnni(u.anno);
+    $("anno").value = String(u.anno);
+    $("trim").value = String(u.trim);
+  }
+
+  /* ---------- dati */
+  function ricostruisci() {
+    const d = new DatiCredito();
+    if (stato.auto) d.aggiungi(stato.auto.valori);
+    for (const f of stato.file) if (f.valori) d.aggiungi(f.valori);
+    stato.dati = d;
+    periodoPredefinito();
+    aggiorna();
+  }
+
+  async function caricaAutomatici() {
+    const S = SEZIONI[sezione()];
+    const basi = location.protocol === "file:" ? [URL_DATI_ONLINE] : ["dati/", URL_DATI_ONLINE];
+    let ultimoErr = null;
+    for (const base of basi) {
+      try {
+        const r = await fetch(`${base}${S.tavola}.csv`, { cache: "no-store" });
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        const letto = leggiCsvBdi(await r.text());
+        let info = null;
+        try { const ri = await fetch(`${base}aggiornamento.json`, { cache: "no-store" }); if (ri.ok) info = await ri.json(); } catch (e) { /* facoltativo */ }
+        stato.auto = letto; stato.autoInfo = info; stato.autoErr = null;
+        stato.autoBase = base;
+        ricostruisci();
+        log(`Dati automatici caricati: ${S.tavola}, fino a ${meseIt(letto.ultima)}.`, "ok");
+        return;
+      } catch (e) { ultimoErr = e; }
+    }
+    stato.auto = null; stato.autoErr = ultimoErr;
+    ricostruisci();
+    log("Dati automatici non raggiungibili: scarica lo ZIP dalla Banca d'Italia e trascinalo nella pagina (punto 2).", "warn");
+  }
+
+  function mostraFonte() {
+    const S = SEZIONI[sezione()];
+    const el = $("fonte");
+    $("linkA2A").href = URL_A2A + S.tavola;
+    $("nomeTavola").textContent = S.tavola;
+    $("nomeZip").textContent = `BANKITALIA_DIFF_${S.tavola}.zip`;
+    if (stato.auto) {
+      const info = stato.autoInfo && stato.autoInfo[S.tavola];
+      const quando = info && info.scaricato ? new Date(info.scaricato) : null;
+      const contr = stato.autoInfo && stato.autoInfo.controllato ? new Date(stato.autoInfo.controllato) : null;
+      const fmt = d => d.toLocaleDateString("it-IT") + " alle " + d.toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" });
+      el.className = "fonte ok";
+      el.innerHTML = `<span class="icona">✅</span><div><b>Dati automatici: ${esc(S.tavola)} fino a ${esc(meseIt(stato.auto.ultima))}</b>
+        <span class="dett">${quando ? `Scaricati dalla Banca d'Italia il ${esc(fmt(quando))}` : "Scaricati dalla Banca d'Italia"}${contr && (!quando || contr - quando > 60000) ? ` · ultimo controllo il ${esc(fmt(contr))}` : ""}.
+        Si aggiornano da soli il giorno 2 di ogni mese.</span></div>`;
+    } else {
+      el.className = "fonte warn";
+      el.innerHTML = `<span class="icona">⚠️</span><div><b>Dati automatici non disponibili</b>
+        <span class="dett">${location.protocol === "file:" ? "La pagina è aperta dal computer e il sito con i dati automatici non risponde. " : ""}Scarica lo ZIP e trascinalo qui sotto (passi 1 e 2).</span></div>`;
+    }
+  }
+
+  function mostraFile() {
+    const ul = $("listaFile");
+    ul.innerHTML = "";
+    stato.file.forEach((f, i) => {
+      const li = document.createElement("li");
+      if (f.errore) li.className = "errore";
+      li.innerHTML = `<span>${f.errore ? "✗" : "✓"} <b>${esc(f.nome)}</b> — ${f.errore ? esc(f.errore) : `${esc(f.descr)}, dati fino a ${esc(meseIt(f.ultima))}`}</span>`;
+      const b = document.createElement("button");
+      b.className = "togli"; b.title = "Togli"; b.textContent = "✕";
+      b.onclick = () => { stato.file.splice(i, 1); mostraFile(); ricostruisci(); };
+      li.appendChild(b);
+      ul.appendChild(li);
+    });
+  }
+
+  async function caricaFile(lista) {
+    for (const file of lista) {
+      log(`Leggo ${file.name}…`, "muted");
+      await new Promise(r => setTimeout(r, 20));
+      try {
+        const letto = await leggiFileCredito(file.name, new Uint8Array(await file.arrayBuffer()));
+        stato.file = stato.file.filter(f => f.nome !== file.name);
+        stato.file.push({ nome: file.name, ...letto });
+        stato.sceltaUtente = false;
+        log(`${file.name}: ${letto.descr}, dati fino a ${meseIt(letto.ultima)}.`, "ok");
+      } catch (e) {
+        stato.file.push({ nome: file.name, errore: e instanceof ErroreDati ? e.message : `Errore di lettura: ${e.message}` });
+        log(`${file.name}: ${e.message}`, "err");
+      }
+    }
+    mostraFile();
+    ricostruisci();
+  }
+
+  /* ---------- controllo */
+  function aggiorna() {
+    mostraFonte();
+    const sez = sezione(), anno = Number($("anno").value), trim = Number($("trim").value);
+    $("notaPeriodo").textContent = trim === 4
+      ? "Con il IV trimestre si crea anche la tabella Tempo-annuale (dicembre di ogni anno)."
+      : "Tempo-annuale si crea solo con il IV trimestre.";
+    const el = $("controllo");
+    if (!stato.dati.valori.size) {
+      el.innerHTML = `<p class="nota" style="margin-top:0">Nessun dato caricato.</p>`;
+      $("genera").disabled = true;
+      return;
+    }
+    const c = controllaPeriodo(stato.dati, sez, anno, trim);
+    const S = SEZIONI[sez];
+    const riga = (nome, ok, dett) => `<tr><td>${esc(nome)}</td><td><span class="badge ${ok === true ? "ok" : ok === "warn" ? "warn" : "err"}">${ok === true ? "pronta" : ok === "warn" ? "con celle vuote" : "non si può fare"}</span></td><td class="dett">${esc(dett)}</td></tr>`;
+    let html = `<table class="controllo">`;
+    const warn = c.avvisi.length ? "warn" : true;
+    html += riga("Credito_Depositi_Sintesi", c.ok, `${meseIt(fineTrim(anno, trim))} e ${meseIt(fineTrim(anno - 1, trim))}: Varese, Lombardia, Italia`);
+    html += riga("Credito_Depositi_Tempo-trimestrale", c.ok ? warn : false, `Varese dal ${nomeTrim(anno - 5, 1)} al ${nomeTrim(anno, trim)}`);
+    if (trim === 4) html += riga("Credito_Depositi_Tempo-annuale", c.ok ? warn : false, `Varese, dicembre ${S.annoIniziale}–${anno}`);
+    html += riga("Credito_Depositi_Tipo-clientela", c.ok ? warn : false, "famiglie consumatrici, imprese private, altro, totale");
+    html += `</table>`;
+    if (!c.ok) {
+      const u = c.ultimo ? `L'ultimo trimestre disponibile è il <b>${esc(nomeTrim(c.ultimo.anno, c.ultimo.trim))}</b>.` : "";
+      html += `<div class="servono">La Banca d'Italia non ha ancora pubblicato (o non ci sono nei dati caricati): ${esc(c.manca.join(", "))}. ${u}
+        I dati di fine trimestre escono circa due mesi dopo (es. marzo a fine maggio).</div>`;
+    } else {
+      if (c.avvisi.length) html += `<div class="servono">Mancano alcuni dati (celle vuote): ${esc(c.avvisi.join(", "))}.</div>`;
+      html += `<div class="pronto">Tutto pronto per il ${esc(nomeTrim(anno, trim))}: ${trim === 4 ? 4 : 3} tabelle.</div>`;
+    }
+    el.innerHTML = html;
+    $("genera").disabled = !c.ok;
+  }
+
+  /* ---------- generazione */
+  function genera() {
+    const sez = sezione(), anno = Number($("anno").value), trim = Number($("trim").value);
+    stato.url.forEach(u => URL.revokeObjectURL(u)); stato.url = [];
+    $("risultati").hidden = true;
+    try {
+      log(`Genero le tabelle dei ${SEZIONI[sez].nome.toLowerCase()} del ${nomeTrim(anno, trim)}…`);
+      const esito = generaReport(stato.dati, sez, anno, trim, { log });
+      const elenco = $("elenco");
+      elenco.innerHTML = "";
+      for (const f of esito.file) {
+        const url = URL.createObjectURL(new Blob([f.dati], { type: XLSX }));
+        stato.url.push(url);
+        const div = document.createElement("div");
+        div.className = "file";
+        div.innerHTML = `<span>${esc(f.nome)}</span>`;
+        const a = document.createElement("a");
+        a.className = "scarica"; a.href = url; a.download = f.nome; a.textContent = "⬇ Scarica";
+        div.appendChild(a);
+        elenco.appendChild(div);
+        log(f.nome, "ok");
+      }
+      const zip = creaZip(esito.file.map(f => ({ nome: `${esito.cartella}/${f.nome}`, dati: f.dati })));
+      const urlZip = URL.createObjectURL(new Blob([zip], { type: "application/zip" }));
+      stato.url.push(urlZip);
+      $("zip").href = urlZip; $("zip").download = `${esito.cartella}.zip`;
+      $("risultati").hidden = false;
+      log(`Fatto: ${esito.file.length} file.`, "ok");
+    } catch (e) {
+      log(e instanceof ErroreDati ? e.message : `Errore inatteso: ${e.message}`, "err");
+      if (!(e instanceof ErroreDati)) console.error(e);
+    }
+  }
+
+  /* ---------- eventi */
+  $("anno").onchange = $("trim").onchange = () => { stato.sceltaUtente = true; $("risultati").hidden = true; aggiorna(); };
+  document.querySelectorAll("input[name=sezione]").forEach(r => r.onchange = () => { $("risultati").hidden = true; aggiorna(); });
+  $("genera").onclick = genera;
+  $("scegli").onchange = e => { caricaFile([...e.target.files]); e.target.value = ""; };
+  const drop = $("drop");
+  drop.addEventListener("dragover", e => { e.preventDefault(); drop.classList.add("sopra"); });
+  drop.addEventListener("dragleave", () => drop.classList.remove("sopra"));
+  drop.addEventListener("drop", e => { e.preventDefault(); drop.classList.remove("sopra"); caricaFile([...e.dataTransfer.files]); });
+  // file lasciati fuori dal riquadro: stessi effetti, invece di aprirli nel browser
+  window.addEventListener("dragover", e => e.preventDefault());
+  window.addEventListener("drop", e => { if (!drop.contains(e.target)) { e.preventDefault(); caricaFile([...e.dataTransfer.files]); } });
+
+  riempiAnni();
+  aggiorna();
+  caricaAutomatici();
+})();
+</script>
+</body>
+</html>

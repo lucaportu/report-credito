@@ -1,0 +1,39 @@
+# Aggiornamento automatico dei dati della Banca d'Italia usati dalla pagina.
+# Gira il giorno 2 di ogni mese (la Banca d'Italia pubblica le tavole mensili tra il 27 e il 31)
+# e si può lanciare a mano: scheda «Actions» → «Aggiorna dati Banca d'Italia» → «Run workflow».
+name: Aggiorna dati Banca d'Italia
+
+on:
+  schedule:
+    - cron: "0 6 2 * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pages: write
+
+jobs:
+  aggiorna:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Scarica e filtra le tavole
+        run: python3 aggiorna_dati.py
+
+      - name: Salva i dati nel repository
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add dati
+          if git diff --cached --quiet; then
+            echo "Nessuna modifica."
+          else
+            git commit -m "Dati Banca d'Italia aggiornati il $(date -u +%Y-%m-%d)"
+            git push
+            # ricostruisce il sito GitHub Pages con i dati nuovi
+            gh api -X POST "repos/${{ github.repository }}/pages/builds" || echo "Richiesta di build di Pages non riuscita (il sito si aggiorna comunque al prossimo push)."
+          fi
