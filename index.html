@@ -143,7 +143,7 @@
   </section>
 
   <section class="card" id="risultati" hidden>
-    <h2>File pronti</h2>
+    <h2 id="titoloRisultati">File pronti</h2>
     <a id="zip" class="zip" href="#">⬇ Scarica tutto (ZIP)</a>
     <div id="elenco"></div>
   </section>
@@ -185,7 +185,7 @@
     </details>
   </section>
 </main>
-<footer>Fonte: Banca d'Italia – Base Dati Statistica · elaborazione Camera di Commercio di Varese · versione 1.1</footer>
+<footer>Fonte: Banca d'Italia – Base Dati Statistica · elaborazione Camera di Commercio di Varese · versione 1.2</footer>
 
 <script id="motore">
 "use strict";
@@ -871,6 +871,9 @@ if (typeof module !== "undefined" && module.exports) {
     for (const a of stato.auto.values()) d.aggiungi(a.valori);
     for (const f of stato.file) if (f.valori) d.aggiungi(f.valori);
     stato.dati = d;
+    // dati cambiati: i file generati prima potrebbero non corrispondere più
+    $("risultati").hidden = true;
+    // propone l'ultimo trimestre disponibile solo se l'utente non ha ancora scelto anno o trimestre
     periodoPredefinito();
     aggiorna();
   }
@@ -949,7 +952,6 @@ if (typeof module !== "undefined" && module.exports) {
         const letto = await leggiFileCredito(file.name, new Uint8Array(await file.arrayBuffer()));
         stato.file = stato.file.filter(f => f.nome !== file.name);
         stato.file.push({ nome: file.name, ...letto });
-        stato.sceltaUtente = false;
         log(`${file.name}: ${letto.descr}, dati fino a ${meseIt(letto.ultima)}.`, "ok");
       } catch (e) {
         stato.file.push({ nome: file.name, errore: e instanceof ErroreDati ? e.message : `Errore di lettura: ${e.message}` });
@@ -1023,6 +1025,7 @@ if (typeof module !== "undefined" && module.exports) {
       const urlZip = URL.createObjectURL(new Blob([zip], { type: "application/zip" }));
       stato.url.push(urlZip);
       $("zip").href = urlZip; $("zip").download = `${esito.cartella}.zip`;
+      $("titoloRisultati").textContent = `File pronti — ${SEZIONI[sez].nome}, ${nomeTrim(anno, trim)}`;
       $("risultati").hidden = false;
       log(`Fatto: ${esito.file.length} file.`, "ok");
     } catch (e) {

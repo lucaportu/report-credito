@@ -1,6 +1,6 @@
 REPORT CREDITO – BANCA D'ITALIA (Varese · Lombardia · Italia)
 ==============================================================
-Versione 1.1 – 29/09/2026. Sezioni pronte: DEPOSITI e IMPIEGHI. In preparazione: sofferenze, sportelli.
+Versione 1.2 – 29/09/2026. Sezioni pronte: DEPOSITI e IMPIEGHI. In preparazione: sofferenze, sportelli.
 
 A COSA SERVE
 Crea le tabelle Excel per Osserva sui depositi e sugli impieghi (prestiti) bancari, con i dati della Banca d'Italia:
@@ -17,7 +17,8 @@ COME SI USA (ogni trimestre)
           BANKITALIA_DIFF_TDB10290.zip (impieghi: BANKITALIA_DIFF_TDB10295.zip, circa 5 MB) nella cartella Download;
        b) trascina quel file ZIP nel riquadro tratteggiato (o clicca il riquadro e sceglilo).
           Non serve aprirlo o scompattarlo.
-3. Scegli anno e trimestre (la pagina propone da sola l'ultimo trimestre disponibile).
+3. Scegli anno e trimestre (la pagina propone da sola l'ultimo trimestre disponibile; una volta che li hai scelti
+   non li cambia più, nemmeno se trascini un file). Il riquadro «File pronti» dice sezione e trimestre dei file creati.
 4. Nel riquadro «3 · Controllo e tabelle» controlla che le tabelle siano «pronte» e premi «Genera tabelle».
 5. Scarica i file uno per uno oppure tutti insieme con «Scarica tutto (ZIP)».
 
