@@ -2,7 +2,7 @@
  "TDB10290": {
   "nome": "Depositi (esclusi PCT) - per provincia, settore e sottosettore della clientela",
   "file_banca_italia": "20260828_080650-STAMEN-TDB10290.csv",
-  "scaricato": "2026-09-29T08:26:06Z",
+  "scaricato": "2026-09-29T09:28:57Z",
   "ultimo_dato": "2026-06-30",
   "righe": 12055,
   "filtri": {
@@ -16,11 +16,11 @@
    ]
   }
  },
- "controllato": "2026-09-29T08:26:06Z",
+ "controllato": "2026-09-29T09:28:57Z",
  "TDB10295": {
   "nome": "Prestiti (esclusi PCT) - per provincia, settore e sottosettore della clientela",
   "file_banca_italia": "20260828_080650-STAMEN-TDB10295.csv",
-  "scaricato": "2026-09-29T08:26:06Z",
+  "scaricato": "2026-09-29T09:28:57Z",
   "ultimo_dato": "2026-06-30",
   "righe": 12351,
   "filtri": {
@@ -31,6 +31,20 @@
    ],
    "ENTE_SEGN": [
     "1070001"
+   ]
+  }
+ },
+ "TRI30401": {
+  "nome": "Quota delle sofferenze (al lordo delle svalutazioni e al netto dei passaggi a perdita) di pertinenza dei maggiori affidati - per provincia della clientela",
+  "file_banca_italia": "20260916_123103-STACORIS-TRI30401.csv",
+  "scaricato": "2026-09-29T09:28:57Z",
+  "ultimo_dato": "2026-03-31",
+  "righe": 1152,
+  "filtri": {
+   "SEDELEG_SOGG": [
+    "ITC41",
+    "ITC4",
+    "IT"
    ]
   }
  }
